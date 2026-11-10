@@ -1,0 +1,7 @@
+openai
+python-dotenv
+pymupdf
+pdfplumber
+chromadb
+streamlit
+pytest

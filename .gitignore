@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Virtual environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Data and vector index (not committed)
+data/raw/
+data/index/
+chroma/
+
+# OS and editor files
+.DS_Store
+.vscode/
+.idea/
