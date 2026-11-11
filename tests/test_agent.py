@@ -159,3 +159,30 @@ def test_uses_given_retriever(monkeypatch):
 )
 def test_numbers_in_text(text, expected):
     assert agent._numbers_in_text(text) == expected
+
+
+def test_empty_reply_is_retried_once(monkeypatch):
+    fake = use_chat(
+        monkeypatch,
+        [
+            reply(tool_calls=[tool_call("c1", "search_reports", {"query": "net income", "year": 2023})]),
+            reply(content=""),
+            reply("Net income was 610,000 million KZT [halyk-2023-p87-0]."),
+        ],
+    )
+
+    result = agent.answer("Halyk net income 2023?")
+
+    assert result.found is True
+    assert result.text.startswith("Net income was 610,000")
+    assert fake.calls[-1][-1] == {"role": "user", "content": agent.EMPTY_REPLY_NUDGE}
+
+
+def test_two_empty_replies_give_not_found(monkeypatch):
+    fake = use_chat(monkeypatch, [reply(content=None), reply(content="  ")])
+
+    result = agent.answer("Halyk net income 2023?")
+
+    assert len(fake.calls) == 2
+    assert result.found is False
+    assert result.text  # never an empty answer

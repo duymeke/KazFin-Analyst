@@ -15,6 +15,7 @@ Flow for one question:
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
@@ -25,6 +26,9 @@ from src.models import Answer, Chunk, Citation
 
 MAX_STEPS = 6
 NOT_FOUND = "Not found in the reports"
+EMPTY_REPLY_NUDGE = "Your last reply was empty. Give your final answer now, following the rules."
+
+log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""You are KazFin Analyst, an assistant that answers questions about the annual reports of companies listed on the Kazakhstan Stock Exchange (KASE).
 
@@ -51,19 +55,40 @@ def answer(question: str, retriever: Any = None) -> Answer:
     seen_chunks: dict[str, Chunk] = {}
     computed: list[float] = []
 
-    for _ in range(MAX_STEPS):
+    nudged = False
+
+    for step in range(1, MAX_STEPS + 1):
         reply = chat(messages, tools=TOOL_SCHEMAS)
         tool_calls = getattr(reply, "tool_calls", None) or []
+        content = (reply.content or "").strip()
+
         if not tool_calls:
-            return _build_answer(reply.content or "", seen_chunks, computed)
+            if content:
+                log.info("step %d: final answer: %s", step, content)
+                return _build_answer(content, seen_chunks, computed)
+            # Some models (often reasoning ones) return neither text nor tool
+            # calls. Ask once more instead of returning an empty answer.
+            log.info("step %d: empty reply from the model", step)
+            if nudged:
+                break
+            nudged = True
+            messages.append({"role": "user", "content": EMPTY_REPLY_NUDGE})
+            continue
 
         messages.append(_assistant_message(reply, tool_calls))
         for call in tool_calls:
+            log.info("step %d: call %s(%s)", step, call.function.name, call.function.arguments)
             result = _run_tool(call.function.name, call.function.arguments, retriever, seen_chunks, computed)
+            log.info("step %d: result %s", step, result if len(result) <= 500 else result[:500] + "...")
             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
+    else:
+        return Answer(
+            text=f"{NOT_FOUND}: the assistant could not finish within {MAX_STEPS} steps.",
+            found=False,
+        )
 
     return Answer(
-        text=f"{NOT_FOUND}: the assistant could not finish within {MAX_STEPS} steps.",
+        text=f"{NOT_FOUND}: the model returned an empty answer. Try again or use another model.",
         found=False,
     )
 
