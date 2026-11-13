@@ -19,3 +19,6 @@ chroma/
 .DS_Store
 .vscode/
 .idea/
+
+# Eval results of the offline --fake mode (real agent/baseline results are committed)
+eval/results/fake-*.json
