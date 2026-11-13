@@ -38,3 +38,36 @@ the course grades each member by their own commits, so commits are authored by A
 | Halyk net income change 2022→2023 | 17.31% via `percent_change`, cites p. 79 and p. 87 ✅ |
 | Halyk debt-to-equity 2023 | 5.8 via `debt_to_equity`, cites p. 85 ✅ |
 | Kcell net income 2023 (not in stub) | "Not found in the reports", no figures ✅ |
+
+## 2026-11-13 · UI and evaluation (Zangar)
+
+### Company filter is passed inside the question
+`answer(question, retriever=None)` has no `company` parameter, and the contract is fixed.
+When a company is selected in the UI, `src/app/backend.py` appends `(Company: <name>)` to the
+question; the agent then passes it to `search_reports(company=...)`. If the contract later gets
+a `company` argument, only `with_company()` in the UI changes.
+
+### UI logic is separate from Streamlit
+`src/app/backend.py` holds the choice of real/fake agent, error handling and formatting, so it is
+tested with pytest without starting Streamlit. `streamlit_app.py` adds the repo root to
+`sys.path`, because `streamlit run` only puts the script's own folder there.
+
+### Errors in the UI never show a stack trace or the key
+`LLMConfigError` (matched by name, so the UI does not import the agent package) becomes a short
+hint about `.env`; any other error shows only its type, not the message, because provider
+error messages can contain request details.
+
+### Evaluation rules
+- Gold values in `eval/questions.json` are filled in **by hand** from the PDFs. The template has
+  `"TODO"` in `gold_answer`, `gold_value`, `source_page`; such questions are skipped by
+  `run_eval` (agent and baseline). `--fake` keeps them, only to test the pipeline.
+- Metrics apply per type: numeric accuracy to `numeric`, citation accuracy to `numeric` and
+  `text`, not-found accuracy to `not_found`. Numeric tolerance is 1% relative; for a gold value
+  of 0 it is absolute (1% of 0 would be 0).
+- Baseline = the same `chat()` with no retrieval and no tools. It has no sources, so its
+  citation accuracy is 0 by design; the comparison that matters is numeric and not-found.
+- A missing LLM key stops the whole run with one message instead of failing every question.
+- Results of real runs (`eval/results/agent-*.json`, `baseline-*.json`) are committed for the
+  defence; `fake-*.json` are ignored in git.
+- Source file names in the template (`halyk_2023.pdf`, ...) follow the example in
+  `src/models.py`; they must be checked against the real names used by ingest.
