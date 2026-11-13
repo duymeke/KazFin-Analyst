@@ -1,0 +1,62 @@
+[
+  {
+    "id": "q001",
+    "question": "What was Halyk Bank's net income in 2023?",
+    "company": "Halyk Bank",
+    "year": 2023,
+    "type": "numeric",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "unit": "million KZT",
+    "source_file": "halyk_2023.pdf",
+    "source_page": "TODO"
+  },
+  {
+    "id": "q002",
+    "question": "By how many percent did Halyk Bank's net income change from 2022 to 2023?",
+    "company": "Halyk Bank",
+    "year": 2023,
+    "type": "numeric",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "unit": "%",
+    "source_file": "halyk_2023.pdf",
+    "source_page": "TODO"
+  },
+  {
+    "id": "q003",
+    "question": "What was KEGOC's revenue in 2024?",
+    "company": "KEGOC",
+    "year": 2024,
+    "type": "numeric",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "unit": "million KZT",
+    "source_file": "kegoc_2024.pdf",
+    "source_page": "TODO"
+  },
+  {
+    "id": "q004",
+    "question": "Who was the Chief Executive Officer of Kcell in 2023?",
+    "company": "Kcell",
+    "year": 2023,
+    "type": "text",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "unit": "",
+    "source_file": "kcell_2023.pdf",
+    "source_page": "TODO"
+  },
+  {
+    "id": "q005",
+    "question": "What was KEGOC's net income in 2015?",
+    "company": "KEGOC",
+    "year": 2015,
+    "type": "not_found",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "unit": "",
+    "source_file": null,
+    "source_page": null
+  }
+]
