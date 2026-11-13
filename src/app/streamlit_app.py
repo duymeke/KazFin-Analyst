@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st  # noqa: E402
 
-from src.app.backend import ask, choose_answer_fn, format_citation  # noqa: E402
+from src.app.backend import COMPANIES, ask, choose_answer_fn, format_citation, with_company  # noqa: E402
 
 st.set_page_config(page_title="KazFin Analyst", page_icon="📊")
 st.title("KazFin Analyst")
@@ -36,6 +36,7 @@ with st.form("question_form"):
         "Question",
         placeholder="How did Halyk Bank's net income change from 2022 to 2023?",
     )
+    company = st.selectbox("Company", COMPANIES)
     submitted = st.form_submit_button("Ask")
 
 if submitted:
@@ -44,7 +45,7 @@ if submitted:
         st.stop()
 
     with st.spinner("Searching the reports..."):
-        result = ask(backend.answer_fn, question.strip())
+        result = ask(backend.answer_fn, with_company(question, company))
 
     if result.error:
         st.error(result.error)

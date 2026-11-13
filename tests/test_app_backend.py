@@ -61,6 +61,14 @@ def test_ask_other_error_has_no_details():
     assert "sk-123" not in result.error
 
 
+def test_with_company_all_keeps_question():
+    assert backend.with_company("  Net income? ", "All") == "Net income?"
+
+
+def test_with_company_adds_hint():
+    assert backend.with_company("Net income?", "Kcell") == "Net income? (Company: Kcell)"
+
+
 def test_format_citation():
     c = Citation(company="KEGOC", year=2024, source_file="kegoc_2024.pdf", page=12)
     assert backend.format_citation(c) == "KEGOC, 2024, page 12"

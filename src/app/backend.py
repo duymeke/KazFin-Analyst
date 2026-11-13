@@ -16,6 +16,9 @@ from src.models import Answer, Citation
 
 AnswerFn = Callable[[str], Answer]
 
+ALL_COMPANIES = "All"
+COMPANIES = [ALL_COMPANIES, "Halyk Bank", "KEGOC", "Kcell"]
+
 
 @dataclass
 class Backend:
@@ -56,6 +59,19 @@ def ask(answer_fn: AnswerFn, question: str) -> AskResult:
                 "LLM_API_KEY and LLM_MODEL. Or run the demo with USE_FAKE_AGENT=1."
             )
         return AskResult(error=f"The request to the LLM failed ({type(exc).__name__}). Try again later.")
+
+
+def with_company(question: str, company: str) -> str:
+    """Add the selected company to the question.
+
+    answer() has no company parameter (fixed contract), so the filter is
+    passed as a hint in the question; the agent then calls
+    search_reports(company=...).
+    """
+    question = question.strip()
+    if not company or company == ALL_COMPANIES:
+        return question
+    return f"{question} (Company: {company})"
 
 
 def format_citation(c: Citation) -> str:
