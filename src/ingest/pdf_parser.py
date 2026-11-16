@@ -60,14 +60,23 @@ class ParseResult:
     problems: list[tuple[int, str]] = field(default_factory=list)  # (page, description)
 
 
-def parse_pdf(path: str | Path, company: str, year: int) -> list[Chunk]:
-    """Parse one report PDF into text and table chunks with 1-based page numbers."""
-    return parse_pdf_with_report(path, company, year).chunks
+def parse_pdf(
+    path: str | Path, company: str, year: int, source_name: str | None = None
+) -> list[Chunk]:
+    """Parse one report PDF into text and table chunks with 1-based page numbers.
+
+    `source_name` is the file name stored in chunks (default: the name of `path`);
+    build_index passes the original name when it parses the OCR copy.
+    """
+    return parse_pdf_with_report(path, company, year, source_name).chunks
 
 
-def parse_pdf_with_report(path: str | Path, company: str, year: int) -> ParseResult:
+def parse_pdf_with_report(
+    path: str | Path, company: str, year: int, source_name: str | None = None
+) -> ParseResult:
     """Like parse_pdf(), but also returns page counts and parsing problems."""
     path = Path(path)
+    source_name = source_name or path.name
     slug = company_slug(company)
     chunks: list[Chunk] = []
     problems: list[tuple[int, str]] = []
@@ -114,7 +123,7 @@ def parse_pdf_with_report(path: str | Path, company: str, year: int) -> ParseRes
                         text=piece,
                         company=company,
                         year=year,
-                        source_file=path.name,
+                        source_file=source_name,
                         page=page_no,
                         kind=kind,
                     )

@@ -54,6 +54,20 @@ def load_manifest(path: str | Path = DEFAULT_MANIFEST) -> Manifest:
     return Manifest(reports=reports, aliases=aliases)
 
 
+def source_path(
+    file: str, raw_dir: str | Path = DEFAULT_RAW_DIR, ocr_dir: str | Path | None = DEFAULT_OCR_DIR
+) -> Path:
+    """The PDF to parse for a manifest file: the OCR copy if it exists, else the raw PDF.
+
+    The OCR copy has the same pages in the same order, so page numbers do not change.
+    """
+    if ocr_dir is not None:
+        ocr = Path(ocr_dir) / file
+        if ocr.exists():
+            return ocr
+    return Path(raw_dir) / file
+
+
 def company_slug(company: str) -> str:
     """Short id-safe name: first word, lowercase, letters and digits only.
 
