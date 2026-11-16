@@ -131,7 +131,14 @@ separators.
 
 ### Next: OCR for the image-only pages
 Without OCR the index has no balance sheet and no income statement, so questions like
-"KEGOC debt-to-equity" cannot be answered from the primary statements. **Decision:** add OCR
-(`ocrmypdf` or `pytesseract`, both need Tesseract installed) for pages without a text layer, and
-mark OCR chunks so we can check them. OCR can misread digits, so for every eval question the
-figure on the cited OCR page is checked by hand against the PDF.
+"KEGOC debt-to-equity" cannot be answered from the primary statements. **Decision:** run
+`ocrmypdf --skip-text` on the PDFs before parsing, instead of `pytesseract`:
+- `--skip-text` OCRs only pages without a text layer; pages that already have text stay as they are.
+- The output PDF has the same pages in the same order, so page numbers, chunk ids and citations
+  still match the original PDF.
+- It adds an invisible text layer that the current parser reads as it is, so we need no own code
+  to render pages to images and put the OCR text back on the right page, as `pytesseract` would need.
+
+`ocrmypdf` needs Tesseract and Ghostscript installed, which goes into the README setup. OCR can
+misread digits, so for every eval question the figure on a cited OCR page is checked by hand
+against the PDF.
