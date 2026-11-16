@@ -142,3 +142,59 @@ Without OCR the index has no balance sheet and no income statement, so questions
 `ocrmypdf` needs Tesseract and Ghostscript installed, which goes into the README setup. OCR can
 misread digits, so for every eval question the figure on a cited OCR page is checked by hand
 against the PDF.
+
+## 2026-11-17 · OCR of image-only pages (Dinmukhamed)
+
+### OCR copies in `data/ocr/`, citations still point to the original PDF
+`scripts/ocr_reports.py` runs `ocrmypdf --skip-text -l eng --output-type pdf` on every file in
+`reports.json` and writes `data/ocr/<file>` (not in git). `--output-type pdf` skips the default
+PDF/A conversion, which is slower and rewrites pages that already have text. `build_index`
+parses the OCR copy when it exists, but passes the original file name to the parser
+(`source_name`), and the page order does not change, so chunk ids and citations are the same as
+before. Covered by tests with a fake raw PDF and a fake OCR copy.
+
+### Results
+OCR of all 9 files took about 1 min 20 s. OCRed pages per file: Halyk 7 / 7 / 7, KEGOC 7 / 5 / 9,
+Kcell 5 / 57 / 10 (2022 / 2023 / 2024). **No page is left without text.** The index grew from
+2,271 to 2,866 chunks (2,838 text, 28 table); 229 of the new ones are `kegoc_2022.pdf`, which is
+indexed again. `build_index` took 162 s.
+
+Test searches, before → after:
+- "net income", Halyk 2023: the profit or loss statement (page 12, "NET INCOME 693,436") was
+  not in the index → now rank 4. Rank 1 is still a notes page (145).
+- "total equity", KEGOC 2024: page 9 (equity and liabilities) could not be found → now rank 4.
+  The page has no "Total equity" label (the equity total is an unlabelled row), which explains
+  part of the weak ranking. Improving the ranking is a separate retrieval task.
+
+### `halyk_2024.pdf`: ocrmypdf exit code 4 (our check, not a crash)
+ocrmypdf wrote the output but its qpdf check found bad `0 0 R` references and it exited with 4
+("output is invalid"). Rewriting the input with qpdf or PyMuPDF first did not help. All 158
+pages were there, and the pages that already had text were unchanged. **Decision:** exit code 4
+is accepted only after our own check (`check_pages`): same page count and identical text on
+every page that had text before; otherwise the file fails. The script prints a warning.
+
+### OCR misread 4 figures on the KEGOC 2024 balance sheet (how we noticed)
+We added up the subtotals in the OCR text of `kegoc_2024.pdf` page 9 and compared them with the
+totals, then compared the rendered page image. Three sums did not match. Wrong digits
+(OCR → image): total equity and liabilities 2024 `1,087,066,105` → `1.097.066.105`, retained
+earnings 2023 `8,259,455` → `48.259.455`, trade and other payables 2024 `17,873,658` →
+`17.573.658`, contract liabilities 2024 `2,008,832` → `2.006.832`. Halyk 2023 page 12 (profit or
+loss) has no wrong digits; all its sums match. **Consequence:** an OCR page is never trusted
+without a check. For every eval question the figure on a cited OCR page is checked against the
+image, and the sums of the statement are checked where possible. Where a figure also appears in
+the text layer (e.g. "Total assets 1.097.066.105" on page 8), the text layer is the reference.
+
+### Dot thousands separators normalized to commas
+The parser rewrites numbers with two or more dot-separated groups of exactly 3 digits
+(`1.097.066.105` → `1,097,066,105`) in page text and table cells, so all companies use the same
+format. Numbers with one dot are not changed, because they may be decimals (`63.65`, `13.5`).
+This leaves some KEGOC thousands with a dot (`569.653`, book value per share `2.780` tenge).
+On OCR pages Tesseract also reads some dots as commas and mixes them (`148,922.757`,
+`1,001.785.007`, `5.588895`); the rule does not touch these mixed numbers. If they turn out to
+hurt answers, a rule for mixed separators is the next step.
+
+### `kegoc_2022.pdf` replaced, `skip` removed
+The new file has 56 pages (the 2024 report has 63), the statements are "for the year ended
+31 December 2022" with 2021 comparatives, no "31 December 2024" appears, and no page is identical
+to `kegoc_2023.pdf` or `kegoc_2024.pdf`. `ocr_reports` now also redoes a file when the raw PDF is
+newer than its OCR copy, so a replaced report does not keep an old OCR copy.
