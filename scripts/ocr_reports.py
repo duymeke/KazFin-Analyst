@@ -1,6 +1,6 @@
 """Add an OCR text layer to every PDF in data/reports.json.
 
-    python -m scripts.ocr_reports            # OCR files not done yet
+    python -m scripts.ocr_reports            # OCR files not done yet (or replaced since)
     python -m scripts.ocr_reports --force    # redo all files
 
 Runs `ocrmypdf --skip-text -l eng --output-type pdf data/raw/<file> data/ocr/<file>`.
@@ -86,8 +86,10 @@ def main(argv: list[str] | None = None) -> int:
             failed += 1
             continue
         if dst.exists() and not args.force:
-            print(f"{entry.file:<16} already done (use --force to redo)")
-            continue
+            if dst.stat().st_mtime >= src.stat().st_mtime:
+                print(f"{entry.file:<16} already done (use --force to redo)")
+                continue
+            print(f"{entry.file:<16} raw PDF is newer than its OCR copy, redoing")
 
         before = empty_pages(src)
         start = time.perf_counter()
