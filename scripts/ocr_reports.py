@@ -32,6 +32,25 @@ def empty_pages(path: str | Path) -> list[int]:
         return [i + 1 for i, page in enumerate(doc) if not page.get_text().strip()]
 
 
+INVALID_OUTPUT = 4  # ocrmypdf exit code: output written, but qpdf found errors in it
+
+
+def check_pages(src: str | Path, ocr: str | Path) -> str | None:
+    """Why the OCR copy cannot replace the source, or None if it can.
+
+    It must have the same number of pages, and every page that has text in the
+    source must have the same text in the copy (--skip-text leaves those pages alone).
+    """
+    with pymupdf.open(src) as a, pymupdf.open(ocr) as b:
+        if len(a) != len(b):
+            return f"{len(b)} pages instead of {len(a)}"
+        for i, (pa, pb) in enumerate(zip(a, b), start=1):
+            text = pa.get_text()
+            if text.strip() and pb.get_text() != text:
+                return f"text of page {i} changed"
+    return None
+
+
 def ocr_command(src: Path, dst: Path, jobs: int | None = None) -> list[str]:
     """The ocrmypdf command line for one file."""
     cmd = ["ocrmypdf", "--skip-text", "-l", "eng", "--output-type", "pdf", "--quiet"]
@@ -48,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true", help="redo files that are already done")
     parser.add_argument("--jobs", type=int, default=None, help="CPU cores for ocrmypdf")
     args = parser.parse_args(argv)
+    sys.stdout.reconfigure(line_buffering=True)  # show progress per file, also when piped
 
     if shutil.which("ocrmypdf") is None:
         print("ocrmypdf not found. Install it: macOS `brew install ocrmypdf`, "
@@ -74,7 +94,20 @@ def main(argv: list[str] | None = None) -> int:
         tmp = dst.with_suffix(".tmp.pdf")  # a crash never leaves a half-written OCR file
         proc = subprocess.run(ocr_command(src, tmp, args.jobs), capture_output=True, text=True)
         seconds = time.perf_counter() - start
-        if proc.returncode != 0:
+        warning = None
+        if proc.returncode == INVALID_OUTPUT and tmp.exists():
+            # ocrmypdf wrote the file but qpdf found structure errors (e.g. halyk_2024:
+            # bad "0 0 R" references). Keep it only if no page or text was lost.
+            problem = check_pages(src, tmp)
+            if problem is None:
+                warning = ("ocrmypdf reported structure errors in the output PDF (exit code 4); "
+                           "page count and text checked, kept")
+            else:
+                print(f"{entry.file:<16} FAILED (ocrmypdf exit code 4: {problem})")
+                tmp.unlink(missing_ok=True)
+                failed += 1
+                continue
+        elif proc.returncode != 0:
             tmp.unlink(missing_ok=True)
             print(f"{entry.file:<16} FAILED (ocrmypdf exit code {proc.returncode})")
             print("      " + (proc.stderr.strip().splitlines() or ["no error output"])[-1])
@@ -85,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
         after = empty_pages(dst)
         print(f"{entry.file:<16} OCRed {len(before) - len(after):>3} page(s), "
               f"{len(after):>3} still without text, {seconds:6.1f} s")
+        if warning:
+            print(f"      ! {warning}")
     return 1 if failed else 0
 
 
