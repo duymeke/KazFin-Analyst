@@ -14,6 +14,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MANIFEST = REPO_ROOT / "data" / "reports.json"
 DEFAULT_RAW_DIR = REPO_ROOT / "data" / "raw"
+DEFAULT_OCR_DIR = REPO_ROOT / "data" / "ocr"  # written by scripts/ocr_reports.py
 
 
 @dataclass(frozen=True)
