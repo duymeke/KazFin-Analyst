@@ -8,6 +8,9 @@ For every page:
   instead of one cell per line. Long pages are split into ~1000-character
   chunks with 150 characters of overlap.
 - Tables: pdfplumber's extract_tables(), converted to markdown, kind="table".
+- Numbers: dot thousands separators (KEGOC: "1.097.066.105") are rewritten
+  to commas ("1,097,066,105"), so all companies use one format. Numbers with
+  a single dot ("1.5", "693.435") are left alone, they may be decimals.
 - Units: a unit line such as "(Millions of Kazakhstani Tenge)" is detected once
   per page and prepended to every chunk of that page that does not contain it.
 
@@ -49,6 +52,10 @@ _UNIT_RE = re.compile(
     re.IGNORECASE,
 )
 
+# 1-3 digits, then two or more ".ddd" groups; not part of a longer number,
+# so "1.5", "693.435", "31.12.2022" and "1.097.066.1" do not match.
+_DOT_THOUSANDS_RE = re.compile(r"(?<![\d.,])\d{1,3}(?:\.\d{3}){2,}(?!\d|[.,]\d)")
+
 
 @dataclass
 class ParseResult:
@@ -86,7 +93,7 @@ def parse_pdf_with_report(
         page_count = len(doc)
         for index, page in enumerate(doc):
             page_no = index + 1
-            text = page_rows(page)
+            text = normalize_numbers(page_rows(page))
             if not text.strip():
                 if page.get_images():
                     problems.append((page_no, "no text layer, image only (scanned?)"))
@@ -153,6 +160,15 @@ def page_rows(page: pymupdf.Page) -> str:
             line += ("   " if word[0] - prev[2] > _COLUMN_GAP else " ") + word[4]
         lines.append(line)
     return "\n".join(lines)
+
+
+def normalize_numbers(text: str) -> str:
+    """Rewrite dot thousands separators to commas: "1.097.066.105" -> "1,097,066,105".
+
+    Only numbers with two or more dot-separated groups of exactly 3 digits are
+    changed; a number with one dot may be a decimal and is left as it is.
+    """
+    return _DOT_THOUSANDS_RE.sub(lambda m: m.group(0).replace(".", ","), text)
 
 
 def find_unit(text: str) -> str | None:
@@ -243,4 +259,4 @@ def split_table(markdown: str, max_chars: int = MAX_TABLE_CHARS) -> list[str]:
 
 
 def _clean_cell(cell: str | None) -> str:
-    return " ".join((cell or "").split()).replace("|", "\\|")
+    return normalize_numbers(" ".join((cell or "").split())).replace("|", "\\|")
