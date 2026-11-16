@@ -7,6 +7,7 @@ import pytest
 
 from src.ingest.pdf_parser import (
     find_unit,
+    normalize_numbers,
     parse_pdf,
     parse_pdf_with_report,
     split_text,
@@ -123,3 +124,32 @@ def test_table_to_markdown_and_broken_tables():
     assert table_to_markdown([["only one cell"]])[0] == ""
     md, issue = table_to_markdown([["a", "", ""], ["", "b", ""], ["", "", "c"]])  # 6 of 9 empty
     assert md == "" and "empty cells" in issue
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("Total assets   1.097.066.105   1.001.785.007",
+         "Total assets   1,097,066,105   1,001,785,007"),
+        ("Equity   2.345.678", "Equity   2,345,678"),
+        ("Loss   (12.345.678)   -1.000.000", "Loss   (12,345,678)   -1,000,000"),
+        ("It was 1.097.066.105.", "It was 1,097,066,105."),  # sentence-final dot stays
+        # one dot: may be a decimal, not touched
+        ("Net income   693.435   1.5   0.125", "Net income   693.435   1.5   0.125"),
+        # not groups of exactly 3 digits, or part of a longer token
+        ("31.12.2022   1.2.3   1.0970.661   1234.567.890   1.097.066.1",
+         "31.12.2022   1.2.3   1.0970.661   1234.567.890   1.097.066.1"),
+        ("693,435   1,097,066,105", "693,435   1,097,066,105"),  # commas already
+    ],
+)
+def test_normalize_numbers(text, expected):
+    assert normalize_numbers(text) == expected
+
+
+def test_dot_thousands_normalized_in_chunks_and_tables(tmp_path):
+    path = tmp_path / "kegoc_2024.pdf"
+    _make_pdf(path, ["Total equity 1.097.066.105 and rate 13.5"])
+    [chunk] = parse_pdf(path, "KEGOC", 2024)
+    assert "1,097,066,105" in chunk.text and "13.5" in chunk.text
+    md, _ = table_to_markdown([["Item", "2024"], ["Total equity", "1.097.066.105"]])
+    assert "| Total equity | 1,097,066,105 |" in md

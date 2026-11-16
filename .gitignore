@@ -12,6 +12,7 @@ __pycache__/
 
 # Data and vector index (not committed)
 data/raw/
+data/ocr/
 data/index/
 chroma/
 

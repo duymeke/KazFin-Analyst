@@ -6,12 +6,39 @@
 companies listed on KASE, for the years 2022–2024. Each PDF contains the independent auditor's
 report, the primary statements and the notes.
 
-**The PDFs and the vector index are not in git** (`data/raw/` and `data/index/` are in
-`.gitignore`). Download the PDFs from the URLs below into `data/raw/`, then run:
+**The PDFs, their OCR copies and the vector index are not in git** (`data/raw/`, `data/ocr/`
+and `data/index/` are in `.gitignore`). Download the PDFs from the URLs below into `data/raw/`,
+then run:
 
 ```bash
-python -m scripts.build_index
+python -m scripts.ocr_reports   # add a text layer to image-only pages -> data/ocr/
+python -m scripts.build_index   # parse and index (reads data/ocr/ when it exists)
 ```
+
+## OCR step
+
+The signed primary statements are image-only pages in every PDF, and `kcell_2023.pdf` is a full
+scan. `scripts/ocr_reports.py` runs, for every file in `reports.json`:
+
+```bash
+ocrmypdf --skip-text -l eng --output-type pdf data/raw/<file> data/ocr/<file>
+```
+
+- `--skip-text` OCRs only pages without a text layer; all other pages are kept as they are.
+- The copy has the same pages in the same order, so chunk ids and citations (file name, page)
+  still refer to the original PDF in `data/raw/`.
+- Files already in `data/ocr/` are skipped, unless the raw PDF is newer than its copy (it was
+  replaced); `--force` redoes all. The script prints how many pages were OCRed per file and
+  how many are still without text.
+- `build_index` reads `data/ocr/<file>` when it exists, otherwise `data/raw/<file>`
+  (`--no-ocr` forces raw). So after replacing a raw PDF, run `ocr_reports` again before
+  `build_index`, otherwise the old OCR copy is indexed.
+- Needs `ocrmypdf` with Tesseract (English) and Ghostscript: `brew install ocrmypdf` (macOS),
+  `sudo apt install ocrmypdf` (Debian/Ubuntu). The whole set takes about 1–2 minutes.
+
+**OCR misreads digits.** On `kegoc_2024.pdf` page 9 four figures were read wrong (e.g. total
+equity and liabilities `1,087,066,105` instead of `1,097,066,105`), see DECISIONS.md. Every
+figure used in `eval/questions.json` from an OCR page must be checked by hand against the image.
 
 ## Naming rule
 
@@ -35,34 +62,42 @@ The company name and year used in the index and in citations come **only** from
 | `halyk_2022.pdf` | Halyk Bank | 2022 | | |
 | `halyk_2023.pdf` | Halyk Bank | 2023 | | |
 | `halyk_2024.pdf` | Halyk Bank | 2024 | | |
-| `kegoc_2022.pdf` | KEGOC | 2022 | | **Wrong file**: contains the 2024 report. Skipped until replaced. |
+| `kegoc_2022.pdf` | KEGOC | 2022 | | Replaced on 17 Nov 2026 (the first download was the 2024 report). |
 | `kegoc_2023.pdf` | KEGOC | 2023 | | |
 | `kegoc_2024.pdf` | KEGOC | 2024 | | |
 | `kcell_2022.pdf` | Kcell | 2022 | | |
-| `kcell_2023.pdf` | Kcell | 2023 | | **Scanned**: only page 1 has a text layer, pages 2–58 are images. Needs OCR or a text version. |
+| `kcell_2023.pdf` | Kcell | 2023 | | **Scanned**: only page 1 has a text layer; pages 2–58 come from OCR only. |
 | `kcell_2024.pdf` | Kcell | 2024 | | |
 
-## Pages without a text layer
+## Pages without a text layer (text from OCR only)
 
-In every file the signed primary statements are images, so their figures are **not in the
-index** until we add OCR. The text layer still has the statement of changes in equity, the
-statement of cash flows and the notes, which repeat many figures.
+These pages are images in `data/raw/`. After the OCR step all of them have text and no page is
+left without text, but their figures come **only from OCR** and can contain misread digits.
+The text layer of the other pages (changes in equity, cash flows, notes) is exact.
 
-| File | Image-only pages | Lost |
+| File | Image-only pages (OCRed) | What they are |
 |---|---|---|
 | `halyk_2022.pdf` | 3, 9–12, 14, 16 | statement of financial position, profit or loss, OCI |
 | `halyk_2023.pdf` | 3, 10–13, 15, 17 | statement of financial position, profit or loss, OCI |
 | `halyk_2024.pdf` | 3, 8–11, 13, 15 | statement of financial position, profit or loss, OCI |
+| `kegoc_2022.pdf` | 7–13 | primary statements |
 | `kegoc_2023.pdf` | 7, 9–10, 12–13 | equity and liabilities half of the balance sheet, comprehensive income |
 | `kegoc_2024.pdf` | 3–7, 9–10, 12–13 | same as 2023, plus the auditor's report |
 | `kcell_2022.pdf` | 9–13 | primary statements |
 | `kcell_2023.pdf` | 2–58 | everything (whole file is a scan) |
 | `kcell_2024.pdf` | 3–12 | auditor's report and primary statements |
 
-`python -m scripts.build_index` prints this list on every run.
+`python -m scripts.ocr_reports` prints the count per file; `python -m scripts.build_index`
+reports any page that is still without text.
 
 ## Units
 
 The statements give units once per page: Halyk Bank in millions of tenge, Kcell in millions of
 tenge, KEGOC in **thousands** of tenge. KEGOC writes numbers with dots as thousands separators
 (`1.097.066.105` = 1,097,066,105 thousand tenge).
+
+The parser rewrites numbers with two or more dot-separated groups of exactly 3 digits to commas
+(`1.097.066.105` → `1,097,066,105`) in page text and tables. Numbers with one dot are left as
+they are, because they may be decimals: in KEGOC files `569.653` (thousands) or `2.780` (book
+value per share, tenge) stay with a dot. On OCR pages Tesseract also mixes the separators
+(`148,922.757`, `5.588895`); these are not normalized either.

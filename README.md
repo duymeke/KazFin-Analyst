@@ -37,9 +37,23 @@ pip install -r requirements.txt
 cp .env.example .env             # then put your API key in .env
 ```
 
+OCR tools (the statement pages in the report PDFs are images):
+
+```bash
+brew install ocrmypdf            # macOS (installs Tesseract and Ghostscript too)
+sudo apt install ocrmypdf        # Debian/Ubuntu
+```
+
+Put the report PDFs into `data/raw/` (see `data/README.md`), then build the index:
+
+```bash
+python -m scripts.ocr_reports    # OCR image-only pages -> data/ocr/
+python -m scripts.build_index    # parse PDFs and build the vector index in data/index/
+```
+
 ## Data
 
-Public annual reports downloaded manually from [kase.kz](https://kase.kz) and the companies' investor relations pages. The PDFs are not committed to this repository; see `data/README.md` (to be added) for the list of sources.
+Public annual reports downloaded manually from [kase.kz](https://kase.kz) and the companies' investor relations pages. The PDFs are not committed to this repository; see `data/README.md` for the list of files and the OCR step.
 
 ## Project files
 
