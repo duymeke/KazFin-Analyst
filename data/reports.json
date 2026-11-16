@@ -1,0 +1,21 @@
+{
+  "reports": [
+    {"file": "halyk_2022.pdf", "company": "Halyk Bank", "year": 2022},
+    {"file": "halyk_2023.pdf", "company": "Halyk Bank", "year": 2023},
+    {"file": "halyk_2024.pdf", "company": "Halyk Bank", "year": 2024},
+    {
+      "file": "kegoc_2022.pdf",
+      "company": "KEGOC",
+      "year": 2022,
+      "skip": "Wrong file: it contains the 2024 report (same text as kegoc_2024.pdf, statements as at 31 December 2024). Replace it with the real 2022 report, then remove this line."
+    },
+    {"file": "kegoc_2023.pdf", "company": "KEGOC", "year": 2023},
+    {"file": "kegoc_2024.pdf", "company": "KEGOC", "year": 2024},
+    {"file": "kcell_2022.pdf", "company": "Kcell", "year": 2022},
+    {"file": "kcell_2023.pdf", "company": "Kcell", "year": 2023},
+    {"file": "kcell_2024.pdf", "company": "Kcell", "year": 2024}
+  ],
+  "aliases": {
+    "KEGOC": ["Kazakhstan Electricity Grid Operating Company"]
+  }
+}
