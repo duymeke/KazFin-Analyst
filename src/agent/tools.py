@@ -89,8 +89,8 @@ SEARCH_REPORTS_SCHEMA: dict[str, Any] = {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "What to look for, e.g. 'net income'"},
-                "company": {"type": "string", "description": "Company name, e.g. 'Halyk Bank'"},
-                "year": {"type": "integer", "description": "Reporting year, e.g. 2023"},
+                "company": {"type": "string", "description": "Company name: 'Halyk Bank', 'KEGOC' or 'Kcell'. Always pass it."},
+                "year": {"type": "integer", "description": "Year of the report, e.g. 2023. The report for year X also has the X-1 figures."},
             },
             "required": ["query"],
         },
