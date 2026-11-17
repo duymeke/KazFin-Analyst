@@ -17,6 +17,8 @@ Guards in code, because the model does not always follow the prompt:
 - a final answer that cites chunk ids search never returned is sent back once
 - figures with no valid citation give found=False instead of an unsourced answer
 - after MAX_SEARCHES searches, search_reports returns an error to the model
+- every figure in the answer must be in a returned chunk or be a calculator
+  result; otherwise the answer is sent back once, then found=False
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ from src.agent.llm import chat
 from src.agent.tools import CALCULATORS, TOOL_SCHEMAS
 from src.models import Answer, Chunk, Citation
 
-MAX_STEPS = 10  # up to MAX_SEARCHES searches, a calculator, two nudges and the answer
+MAX_STEPS = 12  # up to MAX_SEARCHES searches, calculators, three nudges and the answer
 MAX_SEARCHES = 4
 INDEX_DIR = Path(__file__).resolve().parents[2] / "data" / "index"
 INDEX_MISSING = "Index not found. Run: python -m scripts.build_index"
@@ -48,6 +50,10 @@ SEARCH_LIMIT_ERROR = (
 )
 NO_SEARCH_ANSWER = f"{NOT_FOUND}: the model answered without searching the reports."
 NO_SOURCE_ANSWER = f"{NOT_FOUND}: the answer had figures but no source in the reports."
+UNCHECKED_ANSWER = (
+    f"{NOT_FOUND}: the answer had figures that are neither in the reports "
+    "nor computed by a calculator tool."
+)
 
 log = logging.getLogger(__name__)
 
@@ -55,18 +61,20 @@ SYSTEM_PROMPT = f"""You are KazFin Analyst, an assistant that answers questions 
 
 Rules:
 1. Always call search_reports to find figures, and always pass company=. Use only figures that appear in the returned chunks. Never use your own knowledge for figures. If the company asked about is not Halyk Bank, KEGOC or Kcell, reply "{NOT_FOUND}." without guessing.
-2. Never do arithmetic yourself. For any growth, change, ratio, margin, ROE or debt-to-equity, call the calculator tool and use its result.
-3. Units: a chunk may start with "Units: ..." (e.g. "In thousands of tenge", "In millions of tenge"), or the unit is written in the chunk text. KEGOC reports in thousands of tenge, Halyk Bank and Kcell in millions of tenge. Check the unit of every figure, always state the unit in the answer, and pass figures in the same unit to a calculator.
-4. Years and columns: the report for year X has a column for year X and a comparative column for year X-1. For a figure for year Y, search year=Y first. If it is not there, search year=Y+1 and take its comparative (Y) column. Always take the column of the year asked, never the neighbouring one, and say which report the figure came from.
-5. Prefer the main statements (statement of profit or loss, statement of financial position) over the notes when both have the figure. Some statement pages were read by OCR and can have wrong digits; if a row has no label or its numbers look inconsistent, use the same figure from another page (e.g. the statement of changes in equity) and say so.
-6. Cite every figure you use by putting the chunk id in square brackets right after it, e.g. "Net income was 610,000 million KZT [halyk-2023-p87-0]". Use only ids returned by search_reports.
-7. If the needed figures are not in the returned chunks after at most three searches, reply exactly: "{NOT_FOUND}." followed by one short sentence on what is missing. Do not guess.
-8. Keep the answer short: the result first, then the figures it is based on, with units (e.g. million KZT, %). Write numbers with commas as thousands separators (1,097,066,105).
+2. Never do arithmetic yourself, not even a subtraction or a sum. For any difference (e.g. assets - liabilities, 2024 - 2022) call difference, for a sum call total, for growth, ratio, margin, ROE or debt-to-equity call that calculator, and use its result.
+3. Copy every figure exactly as it is written in the chunk. Do not convert units (no "about 769.9 billion") and do not round. Every figure in your answer must be in a chunk or be a calculator result.
+4. Units: a chunk may start with "Units: ..." (e.g. "In thousands of tenge", "In millions of tenge"), or the unit is written in the chunk text. KEGOC reports in thousands of tenge, Halyk Bank and Kcell in millions of tenge. Check the unit of every figure, always state the unit in the answer, and pass figures in the same unit to a calculator.
+5. Years and columns: the report for year X has a column for year X and a comparative column for year X-1. For a figure for year Y, search year=Y first. If it is not there, search year=Y+1 and take its comparative (Y) column. Always take the column of the year asked, never the neighbouring one, and say which report the figure came from.
+6. Prefer the main statements (statement of profit or loss, statement of financial position) over the notes when both have the figure. Some statement pages were read by OCR and can have wrong digits; if a row has no label or its numbers look inconsistent, use the same figure from another page (e.g. the statement of changes in equity) and say so.
+7. Cite every figure you use by putting the chunk id in square brackets right after it, e.g. "Net income was 610,000 million KZT [halyk-2023-p87-0]". Use only ids returned by search_reports.
+8. If the needed figures are not in the returned chunks after at most three searches, reply exactly: "{NOT_FOUND}." followed by one short sentence on what is missing. Do not guess.
+9. Keep the answer short: the result first, then the figures it is based on, with units (e.g. million KZT, %). Write numbers with commas as thousands separators (1,097,066,105).
 """
 
 _CITE_RE = re.compile(r"\[([A-Za-z0-9_.:-]+)\]")
 _NUMBER_RE = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
 _PAGE_RE = re.compile(r"\b(?:p\.|page|pages)\s*\d+", re.IGNORECASE)
+_GROUPED_RE = re.compile(r"(?<![\d.,])\d{1,3}(?:[.,]\d{3})+(?![\d])")
 _MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December"
 # "31 December" and "December 31": the day is not a figure (the year is skipped below)
 _DATE_RE = re.compile(rf"\b\d{{1,2}}\s+(?:{_MONTHS})\b|\b(?:{_MONTHS})\s+\d{{1,2}}\b(?!\d)")
@@ -109,6 +117,7 @@ def answer(question: str, retriever: Any = None) -> Answer:
     nudged = False
     nudged_search = False
     nudged_citations = False
+    nudged_figures = False
 
     for step in range(1, MAX_STEPS + 1):
         reply = chat(messages, tools=TOOL_SCHEMAS)
@@ -134,6 +143,17 @@ def answer(question: str, retriever: Any = None) -> Answer:
                     nudged_citations = True
                     messages.append({"role": "assistant", "content": content})
                     messages.append({"role": "user", "content": _citation_nudge(invented)})
+                    continue
+                cited = [i for i in _CITE_RE.findall(content) if i in seen_chunks]
+                unchecked = [] if not_found or not cited else _unchecked_figures(content, seen_chunks, computed)
+                if unchecked:
+                    if nudged_figures:
+                        log.info("step %d: figures still not from chunks or calculators: %s", step, unchecked)
+                        return Answer(text=UNCHECKED_ANSWER, found=False)
+                    log.info("step %d: figures not from chunks or calculators: %s", step, unchecked)
+                    nudged_figures = True
+                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "user", "content": _figures_nudge(unchecked)})
                     continue
                 return _build_answer(content, seen_chunks, computed)
             # Some models (often reasoning ones) return neither text nor tool
@@ -172,6 +192,45 @@ def _citation_nudge(invented: list[str]) -> str:
         "Cite only ids from the search results. If a figure is not in them, search again "
         f'or reply "{NOT_FOUND}."'
     )
+
+
+def _figures_nudge(unchecked: list[float]) -> str:
+    """Message sent back when the answer has figures from neither chunks nor calculators."""
+    shown = ", ".join(_format_figure(v) for v in unchecked)
+    return (
+        f"These figures are not in the search results and were not computed by a calculator tool: "
+        f"{shown}. Copy figures exactly as written in the chunks, use difference, total or another "
+        "calculator for any arithmetic, and do not convert units. Then give the answer again."
+    )
+
+
+def _format_figure(value: float) -> str:
+    return f"{int(value):,}" if float(value).is_integer() else f"{value:,}"
+
+
+def _unchecked_figures(text: str, seen_chunks: dict[str, Chunk], computed: list[float]) -> list[float]:
+    """Figures in the answer that are neither in a returned chunk nor a calculator result.
+
+    Compared by absolute value, because statements write losses as (930).
+    A calculator result may be rounded in the answer (12.26 -> 12.3 or 12).
+    Small whole numbers (< 100) are not checked: note and list numbers.
+    """
+    in_chunks = {abs(v) for c in seen_chunks.values() for v in _numbers_in_text(c.text)}
+    # OCR mixes separators (1,001.785.007): also read every 3-digit-grouped token as digits only
+    in_chunks |= {
+        float(re.sub(r"\D", "", t)) for c in seen_chunks.values() for t in _GROUPED_RE.findall(c.text)
+    }
+    unchecked = []
+    for value in _numbers_in_text(_CITE_RE.sub("", text)):
+        a = abs(value)
+        if a < 100 and a.is_integer():
+            continue
+        if a in in_chunks:
+            continue
+        if any(a in {abs(c), *(abs(round(c, d)) for d in (0, 1, 2))} for c in computed):
+            continue
+        unchecked.append(value)
+    return list(dict.fromkeys(unchecked))
 
 
 def _assistant_message(reply: Any, tool_calls: list[Any]) -> dict[str, Any]:
