@@ -1,0 +1,516 @@
+{
+ "_about": "Retrieval test cases. value: the figure for that year, taken from the main statement (statement_page). pages: every page of the report where the value occurs, matched by digits only (separators ignored, parentheses allowed). Metrics: strict = statement_page only, lenient = any of pages. dev cases were used to tune the search; heldout cases were fixed in git before the hybrid search code and must never be tuned on.",
+ "cases": [
+  {
+   "split": "dev",
+   "query": "net income",
+   "company": "Halyk Bank",
+   "year": 2023,
+   "value": "693,436",
+   "row": "NET INCOME",
+   "statement_page": 12,
+   "pages": [
+    12,
+    13,
+    14,
+    151,
+    153
+   ],
+   "checked": "page image and statement totals, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "net income 2023",
+   "company": "Halyk Bank",
+   "year": 2023,
+   "value": "693,436",
+   "row": "NET INCOME",
+   "statement_page": 12,
+   "pages": [
+    12,
+    13,
+    14,
+    151,
+    153
+   ],
+   "checked": "page image and statement totals, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "total equity",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "769,921,817",
+   "row": "(unlabelled equity total)",
+   "statement_page": 9,
+   "pages": [
+    9,
+    13,
+    58
+   ],
+   "checked": "page image and statement totals, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "total equity statement of financial position",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "769,921,817",
+   "row": "(unlabelled equity total)",
+   "statement_page": 9,
+   "pages": [
+    9,
+    13,
+    58
+   ],
+   "checked": "page image and statement totals, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "As at 31 December 2024 total equity balance",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "769,921,817",
+   "row": "(unlabelled equity total)",
+   "statement_page": 9,
+   "pages": [
+    9,
+    13,
+    58
+   ],
+   "checked": "page image and statement totals, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "total equity",
+   "company": "KEGOC",
+   "year": 2023,
+   "value": "685,719,134",
+   "row": "(unlabelled equity total)",
+   "statement_page": 9,
+   "pages": [
+    9,
+    55
+   ],
+   "checked": "statement totals, and the comparative column of kegoc_2024 p. 9 page image, 2026-11-18"
+  },
+  {
+   "split": "dev",
+   "query": "total liabilities",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "327,144,288",
+   "row": "Total liabilities",
+   "statement_page": 9,
+   "pages": [
+    9,
+    45,
+    58
+   ],
+   "checked": "page image and statement totals, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "total assets",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "1,097,066,105",
+   "row": "Total assets",
+   "statement_page": 8,
+   "pages": [
+    8,
+    9,
+    45,
+    58
+   ],
+   "checked": "text layer, equals total equity and liabilities on p. 9, 2026-11-17"
+  },
+  {
+   "split": "dev",
+   "query": "revenue",
+   "company": "Kcell",
+   "year": 2024,
+   "value": "235,467",
+   "row": "Revenue from contracts with customers",
+   "statement_page": 9,
+   "pages": [
+    9,
+    44
+   ],
+   "checked": "statement totals and low-resolution page image, 2026-11-18"
+  },
+  {
+   "split": "dev",
+   "query": "revenue total income statement of profit or loss",
+   "company": "Kcell",
+   "year": 2024,
+   "value": "235,467",
+   "row": "Revenue from contracts with customers",
+   "statement_page": 9,
+   "pages": [
+    9,
+    44
+   ],
+   "checked": "statement totals and low-resolution page image, 2026-11-18"
+  },
+  {
+   "split": "dev",
+   "query": "revenue",
+   "company": "Kcell",
+   "year": 2022,
+   "value": "219,002",
+   "row": "Revenue from contracts with customers",
+   "statement_page": 10,
+   "pages": [
+    10,
+    46
+   ],
+   "checked": "same as the comparative column of kcell_2023 p. 9, 2026-11-18"
+  },
+  {
+   "split": "dev",
+   "query": "revenue",
+   "company": "Kcell",
+   "year": 2023,
+   "value": "223,747",
+   "row": "Revenue from contracts with customers",
+   "statement_page": 9,
+   "pages": [
+    9,
+    46
+   ],
+   "checked": "same as the comparative column of kcell_2024 p. 9, 2026-11-18"
+  },
+  {
+   "split": "dev",
+   "query": "profit for the year",
+   "company": "Kcell",
+   "year": 2024,
+   "value": "10,159",
+   "row": "Profit for the year",
+   "statement_page": 9,
+   "pages": [
+    9,
+    10,
+    33
+   ],
+   "checked": "statement totals, 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "total assets",
+   "company": "Halyk Bank",
+   "year": 2024,
+   "value": "18,548,414",
+   "row": "TOTAL ASSETS",
+   "statement_page": 9,
+   "pages": [
+    9,
+    149,
+    152
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "loans to customers",
+   "company": "Halyk Bank",
+   "year": 2022,
+   "value": "7,857,902",
+   "row": "Loans to customers",
+   "statement_page": 10,
+   "pages": [
+    10,
+    62,
+    74,
+    75,
+    104,
+    109,
+    112,
+    119,
+    132
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "cash and cash equivalents",
+   "company": "Halyk Bank",
+   "year": 2023,
+   "value": "1,377,315",
+   "row": "Cash and cash equivalents",
+   "statement_page": 11,
+   "pages": [
+    11,
+    17,
+    65,
+    140,
+    147
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "amounts due to customers",
+   "company": "Halyk Bank",
+   "year": 2024,
+   "value": "12,990,043",
+   "row": "Amounts due to customers",
+   "statement_page": 9,
+   "pages": [
+    9,
+    101,
+    102,
+    135,
+    143,
+    156,
+    157
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "earnings per share",
+   "company": "Halyk Bank",
+   "year": 2022,
+   "value": "50.84",
+   "row": "Basic and diluted earnings per share",
+   "statement_page": 11,
+   "pages": [
+    11,
+    99
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "operating expenses",
+   "company": "Halyk Bank",
+   "year": 2024,
+   "value": "(264,510)",
+   "row": "Operating expenses",
+   "statement_page": 10,
+   "pages": [
+    10,
+    121,
+    149,
+    158
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "total equity",
+   "company": "Halyk Bank",
+   "year": 2022,
+   "value": "1,911,234",
+   "row": "Total equity",
+   "statement_page": 10,
+   "pages": [
+    10,
+    13
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "revenue",
+   "company": "KEGOC",
+   "year": 2022,
+   "value": "217,255,548",
+   "row": "Revenue from contracts with customers",
+   "statement_page": 10,
+   "pages": [
+    10,
+    31,
+    43
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "profit for the year",
+   "company": "KEGOC",
+   "year": 2023,
+   "value": "43,396,389",
+   "row": "Profit for the year",
+   "statement_page": 10,
+   "pages": [
+    10,
+    13
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "cash and cash equivalents",
+   "company": "KEGOC",
+   "year": 2022,
+   "value": "27,563,092",
+   "row": "Cash and cash equivalents",
+   "statement_page": 8,
+   "pages": [
+    8,
+    12,
+    38
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "bonds payable non-current portion",
+   "company": "KEGOC",
+   "year": 2023,
+   "value": "149,521,918",
+   "row": "Bonds payable, non-current portion",
+   "statement_page": 9,
+   "pages": [
+    9,
+    45
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "property, plant and equipment",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "939,418,331",
+   "row": "Property, plant and equipment",
+   "statement_page": 8,
+   "pages": [
+    8,
+    36
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "dividends paid",
+   "company": "KEGOC",
+   "year": 2024,
+   "value": "(4,569,893)",
+   "row": "Dividends paid",
+   "statement_page": 12,
+   "pages": [
+    12
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "income tax expense",
+   "company": "KEGOC",
+   "year": 2022,
+   "value": "(5,720,479)",
+   "row": "Corporate income tax expense",
+   "statement_page": 10,
+   "pages": [
+    10,
+    45
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "total assets",
+   "company": "Kcell",
+   "year": 2023,
+   "value": "391,260",
+   "row": "Total assets",
+   "statement_page": 8,
+   "pages": [
+    8
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "borrowings non-current portion",
+   "company": "Kcell",
+   "year": 2024,
+   "value": "47,667",
+   "row": "Borrowings: non-current portion",
+   "statement_page": 8,
+   "pages": [
+    8,
+    38,
+    39,
+    40
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "cost of sales",
+   "company": "Kcell",
+   "year": 2022,
+   "value": "(136,269)",
+   "row": "Cost of sales",
+   "statement_page": 10,
+   "pages": [
+    10,
+    47
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "trade receivables",
+   "company": "Kcell",
+   "year": 2023,
+   "value": "32,723",
+   "row": "Trade receivables",
+   "statement_page": 8,
+   "pages": [
+    8,
+    38,
+    53,
+    54
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "total equity",
+   "company": "Kcell",
+   "year": 2024,
+   "value": "181,677",
+   "row": "Total equity",
+   "statement_page": 8,
+   "pages": [
+    8,
+    10
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "finance costs",
+   "company": "Kcell",
+   "year": 2023,
+   "value": "(12,889)",
+   "row": "Finance costs",
+   "statement_page": 9,
+   "pages": [
+    9,
+    11,
+    47
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  },
+  {
+   "split": "heldout",
+   "query": "operating profit",
+   "company": "Kcell",
+   "year": 2022,
+   "value": "60,174",
+   "row": "Operating profit",
+   "statement_page": 10,
+   "pages": [
+    10
+   ],
+   "checked": "value checked by hand against the PDF page image (Dinmukhamed), 2026-11-18"
+  }
+ ]
+}

@@ -273,3 +273,64 @@ Agent run on `agent/real-retriever` (6e03e66), the same question twice: both ans
 769,921,817 thousand tenge (was 1,087,066,105). In the second run the model computed
 1,097,066,105 − 327,144,288 itself instead of calling a calculator; passed to Berikzhan.
 The agent still needs 4–5 searches to reach the statement pages (ranking, see above).
+
+## 2026-11-18 · Hybrid search: vector + BM25 + table rows (Dinmukhamed)
+
+### Why
+Vector search alone ranked the notes above the statements. For "revenue" (Kcell 2024) the
+statement page was rank 22: the notes use the word in many sentences, the statement uses it once,
+next to the figure. The agent then needed 4–6 searches and sometimes took a figure from a note
+or an OCR error instead of the statement.
+
+### Test set first
+`data/retrieval_cases.json` was committed (6d02ab8) **before** the search code (c23e587).
+- 13 **dev** cases: the queries the agent actually sent; the row signal below was designed on them.
+- 21 **held-out** cases: written before the search was changed and never tuned on.
+
+Targets are chosen **by value**: we first selected pages by row label, but that rule is almost the
+same as the new row signal (it would favour the new method), and it both missed pages (EPS
+`50.84` has no comma) and added wrong ones ("Total assets classified as held for sale").
+Each held-out value was checked by hand against the PDF image (Dinmukhamed), and each extra page
+with the same digits was checked to hold the same figure (e.g. Halyk 2022 p. 99 is the EPS
+note). Two metrics: **strict** (only the statement page) and **lenient** (any page with the value).
+Two queries were replaced before freezing because the statement has no single value for them
+(bonds payable, borrowings: only non-current and current parts), so they ask for the non-current part.
+
+Honest note: a draft of the hybrid code existed before the test set was committed (written
+before we agreed on the order). It was not run on the held-out cases until the set was committed.
+
+### What the search does
+`Retriever.search()` (same interface) fuses three rankings of the chunks of the requested
+company and year with reciprocal rank fusion (RRF, k = 60):
+1. vector search (all-MiniLM, as before);
+2. BM25 on words (own code, about 30 lines, no new dependency; k1 = 1.5 for term-frequency
+   saturation, b = 0.75 for length normalization; both explained in the code and checked by a
+   hand-calculated test);
+3. a table-row signal: a row with figures whose label starts with the query's content words
+   ("Revenue from contracts with customers 22 235,467 223,747"). Stop words such as "total",
+   "statement", "december" are ignored; this list was chosen on dev.
+`score` is the RRF score divided by the best possible one (first in all three rankings), so it is
+0–1. A raw RRF value (at most 3/61 ≈ 0.05) could be read as "not relevant". `src/models.py` still
+calls `score` "retrieval similarity"; changing that comment needs the team's approval, so it is
+not changed yet. Today neither the agent nor the UI reads `score` (the agent sends id, company,
+year, page and text to the LLM); only `scripts/search.py` prints it.
+`Retriever(hybrid=False)` keeps plain vector search for comparison.
+
+### Results (k = 10)
+| | dense | dense + BM25 | dense + rows | **hybrid (all three)** |
+|---|---|---|---|---|
+| held-out strict hit@1 / hit@5 / MRR | 0.00 / 0.14 / 0.07 | 0.00 / 0.52 / 0.24 | 0.19 / 0.71 / 0.41 | **0.38 / 0.76 / 0.54** |
+| held-out lenient hit@1 / hit@5 / MRR | 0.29 / 0.71 / 0.47 | 0.52 / 0.95 / 0.72 | 0.57 / 0.90 / 0.70 | **0.81 / 0.95 / 0.87** |
+| dev strict hit@1 / hit@5 / MRR | 0.15 / 0.62 / 0.29 | 0.46 / 0.69 / 0.57 | 0.85 / 1.00 / 0.92 | 0.85 / 1.00 / 0.92 |
+
+Each part helps on held-out; the full fusion is best. Dev is higher than held-out, as expected for
+the set the row signal was designed on. Remaining misses (held-out strict > 10): Halyk "loans to
+customers" and "amounts due to customers": the figure is repeated in many notes (9 and 7 pages),
+so a note ranks above the balance sheet; lenient finds them at rank 1 and 4.
+
+Agent check (`agent/real-retriever` @ ce1f183 with this retriever, index with OCR fixes):
+Halyk 693,436 ✅ (1 search), KEGOC 769,921,817 ✅ citing p. 9 (4 searches: the first result is
+p. 58, the capital note with the same figure; the model keeps looking for a row labelled
+"Total equity", which the statement does not have), Kcell 219,002 → 235,467, +7.52 % ✅ (2
+searches, also computed revenue with government grants via `total`). Kaspi was not run: the
+OpenRouter free daily limit was reached (HTTP 429).
