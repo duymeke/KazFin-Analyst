@@ -274,3 +274,43 @@ The run showed that the model does not keep the prompt rules, so `agent.py` now 
   to the model. `MAX_STEPS` went from 8 to 10 so the two nudges fit.
 - Days in dates ("31 December", "December 31") are no longer counted as figures.
 Each case from the run has a test with a scripted `chat()` in `tests/test_agent.py`.
+
+### Second run: index before PR #7, the model subtracted by itself (agent was wrong)
+Run by Dinmukhamed on `agent/real-retriever` @ 6e03e66, index built on `main` @ 4c04013 (after
+PR #6 rotated pages, **before** PR #7 OCR fixes), same model. `pytest`: 162 passed.
+
+| Question | Answer | Cited | Verdict |
+|---|---|---|---|
+| Halyk net income 2023 | 693,436 million KZT | p. 12, 13, 153 | ✅ now cites the profit or loss statement itself (p. 12) |
+| KEGOC total equity end of 2024 | 759,921,817 thousand KZT | p. 9, 13 | ❌ 10,000,000 too low (below) |
+| Kcell revenue 2022 → 2024 | 219,002 → 235,467 million KZT, +7.52% | p. 10 (2022), p. 9 (2024) | ✅ two searches, `percent_change`; both figures are "revenue from contracts with customers" |
+| Kaspi net income 2023 | "Not found in the reports" | none | ✅ |
+
+**KEGOC: own arithmetic on an OCR error.** The index did not have PR #7 yet, so p. 9 still
+said "Total equity and abilities 1,087,066,105". The model wrote
+"Equity = 1,087,066,105 − 327,144,288 = 759,921,817" and "about 759.9 billion": a subtraction
+and a unit conversion done by the model, not by a tool. The search limit from the guards above
+worked (step 5: "search limit reached"), but p. 13 with the 2024 equity total was still not
+found. **How we noticed:** the result is 10,000,000 below the 769,921,817 we get from the
+text-layer total on p. 8. **Root cause on our side:** the agent had no tool for a subtraction
+or a sum, only for percent change and ratios, so the model could not follow "never do
+arithmetic yourself" even if it wanted to.
+
+**Fix:**
+- New calculators `difference(minuend, subtrahend)` and `total(values)` in `tools.py`.
+- Every figure in a final answer must appear in a chunk that search returned or be a calculator
+  result (a rounded one is fine: 12.26 → 12.3). Otherwise the model gets the list of such
+  figures once ("use difference, total or another calculator, do not convert units"); if it
+  repeats, the answer is "Not found in the reports: the answer had figures that are neither in
+  the reports nor computed by a calculator tool" with `found=False`. Small whole numbers (< 100,
+  note and list numbers) are not checked; figures are compared without sign, because the
+  statements write losses as (930); OCR numbers with mixed separators (`1,001.785.007`) also
+  count as written. `MAX_STEPS` went from 10 to 12.
+- The prompt now says: copy figures exactly, no unit conversion, use `difference` and `total`.
+
+**Kcell revenue line:** the answer uses "revenue from contracts with customers" in both years.
+Kcell's press releases give a higher total (221,232 million KZT for 2022), which includes other
+revenue. The eval gold value must say which line counts as "revenue".
+
+**Next:** rebuild the index on `main` @ b471425 (with PR #7) and rerun the KEGOC question.
+Ranking p. 13 higher for "total equity" is Dinmukhamed's next retrieval task.
