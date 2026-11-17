@@ -60,6 +60,22 @@ def test_zero_denominator_raises(func, args):
         func(*args)
 
 
+def test_difference():
+    # KEGOC 2024: total equity and liabilities - total liabilities (thousand KZT)
+    assert tools.difference(1_097_066_105, 327_144_288) == 769_921_817
+    assert tools.difference(219_002, 235_467) == -16_465
+
+
+def test_total():
+    assert tools.total([17_573_658, 2_006_832, 53_243]) == 19_633_733
+    assert tools.total([0.1, 0.2]) == 0.3
+
+
+def test_total_of_nothing_raises():
+    with pytest.raises(ValueError):
+        tools.total([])
+
+
 def test_every_calculator_has_a_schema():
     schema_names = {s["function"]["name"] for s in TOOL_SCHEMAS}
     assert set(CALCULATORS) <= schema_names
