@@ -90,6 +90,19 @@ The text layer of the other pages (changes in equity, cash flows, notes) is exac
 `python -m scripts.ocr_reports` prints the count per file; `python -m scripts.build_index`
 reports any page that is still without text.
 
+## Rotated pages
+
+Some statement pages are landscape scans stored with a page rotation (`/Rotate 90` or `270`).
+The parser maps word positions to the page as it is displayed before it builds rows, so these
+pages read normally (fixed on 18 Nov 2026; before that their text in the index was garbled).
+
+| File | Rotated pages |
+|---|---|
+| `halyk_2022.pdf` | 14 |
+| `halyk_2024.pdf` | 13 |
+| `kegoc_2023.pdf` | 9–10, 12–13 |
+| `kcell_2024.pdf` | 8–12 (all primary statements) |
+
 ## Units
 
 The statements give units once per page: Halyk Bank in millions of tenge, Kcell in millions of

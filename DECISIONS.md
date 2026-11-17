@@ -198,3 +198,45 @@ The new file has 56 pages (the 2024 report has 63), the statements are "for the 
 31 December 2022" with 2021 comparatives, no "31 December 2024" appears, and no page is identical
 to `kegoc_2023.pdf` or `kegoc_2024.pdf`. `ocr_reports` now also redoes a file when the raw PDF is
 newer than its OCR copy, so a replaced report does not keep an old OCR copy.
+
+## 2026-11-18 · Rotated and skewed statement pages (Dinmukhamed)
+
+### Rotated pages were garbled in the index (bug in our parser)
+**How we noticed:** Berikzhan's first run of the agent on the real retriever. For "How did
+Kcell's revenue change from 2022 to 2024?" the agent answered with invented figures, and when we
+looked for the real 2024 revenue, the OCR text of the Kcell 2024 statement pages (8–12) was a
+list of single words ("Net In / Chief Chief Basic Total Other Profit ..."). These pages are
+landscape scans stored with `/Rotate 270`. PyMuPDF gives word positions on the unrotated page,
+so `page_rows` grouped the words of one column into a "row". The same happened on Halyk 2022
+p. 14, Halyk 2024 p. 13 and KEGOC 2023 pp. 9–10, 12–13 (the equity and liabilities half of the
+balance sheet). OCR itself was fine. **Fix:** `page_rows` maps every word with
+`page.rotation_matrix` before grouping. Tests build a page with `/Rotate 90` and `270`; they fail
+on the old parser.
+
+### Numbers on skewed scans fell into the next row
+After the rotation fix, the Kcell 2024 rows still came out as "Revenue from contracts with
+customers 22" and, on the next line, "235,467 223,747". The scan is slightly skewed, so the
+numbers sit 3–4 pt below their label, and the row tolerance was a fixed 3 pt. **Fix:** two words
+are on one row when their vertical centres differ by at most max(3 pt, half the word height).
+Rows in these PDFs are at least ~11 pt apart, so separate rows stay separate (tested).
+**Effect on other pages:** we compared the old and new parser on every page of all 9 files.
+Besides the 12 rotated pages, 44 OCR pages and 15 text-layer pages changed. On tables, a label and
+its numbers that were split are now one row (e.g. "Unallocated 58,011" in the Halyk segment
+note). On two-column auditor's report pages the two columns are now side by side in one row
+instead of alternating lines; these pages have no figures. A scan for rows where two different
+table rows were merged found none (one hit was OCR noise in one row).
+
+### Results
+The index has 2,868 chunks (was 2,866). On the fixed pages all subtotals add up: KEGOC 2023
+balance sheet (both columns: equity, non-current, current, total liabilities, total equity and
+liabilities) and the Kcell 2024 statement of comprehensive income (gross profit, operating profit,
+profit before tax, profit for the year, both years). The 2023 column of KEGOC 2023 p. 9 matches
+the comparative column of KEGOC 2024 p. 9 as read from the image, including retained earnings
+48,259,455, which OCR misread on the 2024 page. Kcell revenue: 235,467 (2024), 223,747 (2023),
+219,002 (2022) million tenge; 2023 matches the separate `kcell_2023.pdf`.
+
+### Still open: statement pages rank low for short queries
+The text is now right, but the embedding search ranks notes above the statements: Kcell 2024
+p. 9 is rank 22 for "revenue" and rank 1 for "statement of comprehensive income revenue from
+contracts with customers"; KEGOC 2023 p. 9 is rank 6 for "total equity". Improving the ranking
+(e.g. a keyword match on row labels, or preferring statement pages) is the next retrieval task.
