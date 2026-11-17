@@ -142,6 +142,12 @@ def parse_pdf_with_report(
 def page_rows(page: pymupdf.Page) -> str:
     """Page text with words regrouped into visual rows (top to bottom, left to right)."""
     words = page.get_text("words")  # (x0, y0, x1, y1, word, block, line, word_no)
+    if page.rotation:
+        # Word positions are given on the unrotated page. On a page shown rotated
+        # (e.g. /Rotate 270 on a landscape scan) the visual rows would become
+        # columns, so map every word to the page as it is displayed.
+        matrix = page.rotation_matrix
+        words = [(*(pymupdf.Rect(w[:4]) * matrix), *w[4:]) for w in words]
     words.sort(key=lambda w: ((w[1] + w[3]) / 2, w[0]))
     rows: list[list[tuple]] = []
     row_y: float | None = None

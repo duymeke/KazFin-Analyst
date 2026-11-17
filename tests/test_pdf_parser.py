@@ -8,6 +8,7 @@ import pytest
 from src.ingest.pdf_parser import (
     find_unit,
     normalize_numbers,
+    page_rows,
     parse_pdf,
     parse_pdf_with_report,
     split_text,
@@ -153,3 +154,30 @@ def test_dot_thousands_normalized_in_chunks_and_tables(tmp_path):
     assert "1,097,066,105" in chunk.text and "13.5" in chunk.text
     md, _ = table_to_markdown([["Item", "2024"], ["Total equity", "1.097.066.105"]])
     assert "| Total equity | 1,097,066,105 |" in md
+
+
+def _rotated_statement_page(rotation):
+    """A landscape page shown rotated, like the Kcell 2024 scans (/Rotate 270).
+
+    The text is written so that it reads normally as displayed; on the
+    unrotated page it runs vertically.
+    """
+    doc = pymupdf.open()
+    page = doc.new_page(width=842, height=595)
+    page.set_rotation(rotation)
+    rows = [("Revenue", "235,467", "223,747"), ("Cost of sales", "(183,731)", "(156,008)")]
+    for n, row in enumerate(rows):
+        for x, text in zip((70, 400, 480), row):
+            point = pymupdf.Point(x, 100 + 20 * n) * page.derotation_matrix
+            page.insert_text(point, text, fontsize=10, rotate=rotation)
+    return pymupdf.open("pdf", doc.tobytes())[0]
+
+
+@pytest.mark.parametrize("rotation", [90, 270])
+def test_page_rows_on_rotated_page_follows_displayed_rows(rotation):
+    page = _rotated_statement_page(rotation)
+    assert page.rotation == rotation
+    assert page_rows(page) == (
+        "Revenue   235,467   223,747\n"
+        "Cost of sales   (183,731)   (156,008)"
+    )
