@@ -8,6 +8,7 @@ import pytest
 
 from src.agent import agent
 from src.agent.stub_retriever import StubRetriever
+from src.models import Chunk
 
 REAL_DEFAULT_RETRIEVER = agent._default_retriever
 
@@ -341,3 +342,108 @@ def test_search_limit_is_enforced_in_code(monkeypatch):
     assert CountingRetriever.calls == agent.MAX_SEARCHES
     last_tool = [m for m in fake.calls[-1] if m["role"] == "tool"][-1]
     assert json.loads(last_tool["content"]) == {"error": agent.SEARCH_LIMIT_ERROR}
+
+
+# --- figures must come from chunks or calculators (second real run, DECISIONS 2026-11-18) ---
+
+KEGOC_P9 = Chunk(
+    id="kegoc-2024-p9-1",
+    text=(
+        "Units: In thousands of tenge\n"
+        "Total liabilities   327,144,288   316,065,873\n"
+        "Total equity and liabilities   1,097,066,105   1,001,785,007"
+    ),
+    company="KEGOC",
+    year=2024,
+    source_file="kegoc_2024.pdf",
+    page=9,
+)
+
+
+class OneChunkRetriever:
+    def __init__(self, chunk):
+        self.chunk = chunk
+
+    def search(self, query, k=5, company=None, year=None):
+        return [self.chunk]
+
+
+def kegoc_search():
+    return reply(tool_calls=[tool_call("s1", "search_reports", {"query": "total equity", "company": "KEGOC", "year": 2024})])
+
+
+def test_own_subtraction_is_sent_back_then_calculator_is_accepted(monkeypatch):
+    fake = use_chat(
+        monkeypatch,
+        [
+            kegoc_search(),
+            reply(
+                "Equity = 1,097,066,105 - 327,144,288 = 769,921,817 thousand KZT "
+                "(about 769.9 billion) [kegoc-2024-p9-1]."
+            ),
+            reply(tool_calls=[tool_call("d1", "difference", {"minuend": 1097066105, "subtrahend": 327144288})]),
+            reply("Total equity was 769,921,817 thousand KZT [kegoc-2024-p9-1]."),
+        ],
+    )
+
+    result = agent.answer("What was KEGOC's total equity at the end of 2024?", retriever=OneChunkRetriever(KEGOC_P9))
+
+    nudge = fake.calls[2][-1]["content"]
+    assert "769,921,817" in nudge and "769.9" in nudge  # own result and unit conversion
+    assert "1,097,066,105" not in nudge  # figures copied from the chunk are fine
+    assert result.found is True
+    assert result.numbers[0] == 769921817
+    assert [c.page for c in result.citations] == [9]
+
+
+def test_own_arithmetic_twice_gives_not_found(monkeypatch):
+    own = reply("Equity = 1,097,066,105 - 327,144,288 = 769,921,817 thousand KZT [kegoc-2024-p9-1].")
+    use_chat(monkeypatch, [kegoc_search(), own, own])
+
+    result = agent.answer("KEGOC equity 2024?", retriever=OneChunkRetriever(KEGOC_P9))
+
+    assert result.found is False
+    assert result.text == agent.UNCHECKED_ANSWER
+    assert result.numbers == []
+
+
+def test_rounded_calculator_result_is_accepted(monkeypatch):
+    fake = use_chat(
+        monkeypatch,
+        [
+            reply(tool_calls=[tool_call("c1", "search_reports", {"query": "net income", "company": "Halyk Bank"})]),
+            reply(tool_calls=[tool_call("c2", "percent_change", {"old": 520000, "new": 610000})]),
+            reply("Net income grew by about 17.3% [halyk-2023-p87-0]."),
+        ],
+    )
+
+    result = agent.answer("Halyk net income growth?")
+
+    assert len(fake.calls) == 3  # no nudge
+    assert result.found is True
+
+
+@pytest.mark.parametrize(
+    "answer, expected",
+    [
+        ("Retained earnings 64,089,351 [x]", []),  # in the chunk
+        ("A loss of -930 [x]", []),  # the chunk writes losses as (930)
+        ("Equity 769,921,817 [x]", [769921817.0]),  # own subtraction
+        ("About 64.1 billion [x]", [64.1]),  # own unit conversion
+        ("See note 14 and item 3 [x]", []),  # small whole numbers are not checked
+        ("Rose by 12.26% [x]", []),  # calculator result
+        ("Rose by 12.3% [x]", []),  # calculator result, rounded
+        ("Rose by 12.4% [x]", [12.4]),
+        ("Total 1,001,785,007 [x]", []),  # OCR wrote it as 1,001.785.007
+    ],
+)
+def test_unchecked_figures(answer, expected):
+    chunk = Chunk(
+        id="x",
+        text="Retained earnings   64,089,351   48,259,455\nTreasury shares   (930)\nTotal   _1,001.785.007",
+        company="KEGOC",
+        year=2024,
+        source_file="kegoc_2024.pdf",
+        page=9,
+    )
+    assert agent._unchecked_figures(answer, {"x": chunk}, [12.26]) == expected
