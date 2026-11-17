@@ -240,3 +240,36 @@ The text is now right, but the embedding search ranks notes above the statements
 p. 9 is rank 22 for "revenue" and rank 1 for "statement of comprehensive income revenue from
 contracts with customers"; KEGOC 2023 p. 9 is rank 6 for "total equity". Improving the ranking
 (e.g. a keyword match on row labels, or preferring statement pages) is the next retrieval task.
+
+## 2026-11-18 · Hand-checked OCR fixes (Dinmukhamed)
+
+### OCR errors changed the agent's answer
+After the rotation fix, the second agent run answered "KEGOC's total equity at the end of 2024"
+with **1,087,066,105** instead of 769,921,817. The OCR text of KEGOC 2024 p. 9 read the row
+"Total equity and liabilities 1.097.066.105" as "Total equity **and abilities** 1,0**8**7,066,105",
+and the real equity total is a row without a label in the PDF. So one chunk had "Total equity"
+next to a wrong number, and the model took it, although it also saw 769,921,817 on p. 13.
+
+### Decision: a file of hand-checked fixes instead of more OCR
+`data/ocr_fixes.json` (in git) lists corrections per file and page; the parser applies them to
+the page text before chunking. Each fix replaces one whole row and is applied only when that row
+occurs on the page exactly once; otherwise `build_index` reports it and changes nothing.
+We chose this over re-running OCR with other settings: there is no guarantee that new settings
+fix exactly these digits, and they could break pages that are right now. A fix is added only
+after checking the row against the page image and checking that the totals add up. Labels that
+are missing in the PDF (the unlabelled equity total) are **not** added, so the index never
+contains text that is not in the report.
+
+### Results
+17 rows of KEGOC 2024 p. 9 fixed: 4 digits (retained earnings 2023 48,259,455; trade payables
+2024 17,573,658; contract liabilities 2024 2,006,832; total equity and liabilities 2024
+1,097,066,105), the label "abilities", 4 note numbers, mixed separators (`148,922.757`,
+`5.588895`), stray characters (`‘`, `_`, trailing commas) and single-dot thousands on this page
+(`569.653` → `569,653`, book value per share `2.780` → `2,780` tenge). Checked in code after the
+fixes: equity, non-current, current, total liabilities and total equity and liabilities add up
+in both columns (before: 3 of these did not). `build_index` reports "OCR fixes applied: 17 of 17".
+
+Agent run on `agent/real-retriever` (6e03e66), the same question twice: both answers are
+769,921,817 thousand tenge (was 1,087,066,105). In the second run the model computed
+1,097,066,105 − 327,144,288 itself instead of calling a calculator; passed to Berikzhan.
+The agent still needs 4–5 searches to reach the statement pages (ranking, see above).
