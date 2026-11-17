@@ -90,6 +90,30 @@ The text layer of the other pages (changes in equity, cash flows, notes) is exac
 `python -m scripts.ocr_reports` prints the count per file; `python -m scripts.build_index`
 reports any page that is still without text.
 
+## OCR fixes (`data/ocr_fixes.json`)
+
+OCR misreads digits and words, and some of those errors change the answer (KEGOC 2024 p. 9:
+"Total equity and abilities 1,087,066,105" instead of "Total equity and liabilities
+1,097,066,105"). `data/ocr_fixes.json` holds hand-checked corrections; it is in git.
+
+```json
+{"file": "kegoc_2024.pdf", "page": 9,
+ "old": "Retained earnings   64,089,351   8,259,455",
+ "new": "Retained earnings   64,089,351   48,259,455",
+ "checked": "page image, 2026-11-17"}
+```
+
+- A fix replaces **one whole row** of the page text as the parser builds it (after `1.097.066.105`
+  → `1,097,066,105`). Copy `old` exactly from the parsed text, including the three-space column
+  gaps and any OCR noise such as `‘`.
+- It is applied only when the `old` row occurs on that page exactly once. Otherwise `build_index`
+  prints `! OCR fix not applied (...)` and leaves the text as it is, so a fix that no longer fits
+  (e.g. after OCR was redone) is visible, not silent.
+- Fixes apply only to OCR copies in `data/ocr/`, not with `build_index --no-ocr`.
+- **Add a fix only after checking the row against the page image**, and check that the
+  statement's totals add up after the fix. Never add labels or figures that are not on the page.
+- Current fixes: 17 rows of `kegoc_2024.pdf` p. 9 (balance sheet, equity and liabilities).
+
 ## Rotated pages
 
 Some statement pages are landscape scans stored with a page rotation (`/Rotate 90` or `270`).
