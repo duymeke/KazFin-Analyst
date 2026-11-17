@@ -38,7 +38,11 @@ ID_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")  # what the agent's citation regex acc
 
 # Words closer than this (in points) on one row are joined with one space,
 # wider gaps (table columns) with three.
+# Two words are on one row when their vertical centres differ by at most
+# _ROW_TOLERANCE points or half the word height, whichever is larger: scanned
+# pages are slightly skewed, so numbers sit 3-4 pt lower than their label.
 _ROW_TOLERANCE = 3.0
+_ROW_TOLERANCE_HEIGHT = 0.5
 _COLUMN_GAP = 12.0
 
 # A unit line at the start of a row: "In thousands of tenge", "(Millions of Kazakhstani Tenge)",
@@ -151,11 +155,14 @@ def page_rows(page: pymupdf.Page) -> str:
     words.sort(key=lambda w: ((w[1] + w[3]) / 2, w[0]))
     rows: list[list[tuple]] = []
     row_y: float | None = None
+    row_h = 0.0
     for word in words:
         y = (word[1] + word[3]) / 2
-        if row_y is None or abs(y - row_y) > _ROW_TOLERANCE:
+        h = word[3] - word[1]
+        tolerance = max(_ROW_TOLERANCE, _ROW_TOLERANCE_HEIGHT * min(h, row_h))
+        if row_y is None or abs(y - row_y) > tolerance:
             rows.append([])
-            row_y = y
+            row_y, row_h = y, h
         rows[-1].append(word)
 
     lines = []

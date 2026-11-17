@@ -181,3 +181,23 @@ def test_page_rows_on_rotated_page_follows_displayed_rows(rotation):
         "Revenue   235,467   223,747\n"
         "Cost of sales   (183,731)   (156,008)"
     )
+
+
+def test_page_rows_joins_label_and_numbers_on_skewed_scan(tmp_path):
+    """On a skewed scan the numbers sit 3-4 pt lower than their label."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    for n, (label, number) in enumerate([("Revenue", "235,467"), ("Gross profit", "57,589")]):
+        y = 100 + 16 * n
+        page.insert_text((70, y), label, fontsize=10)
+        page.insert_text((400, y + 4), number, fontsize=10)  # 4 pt lower
+    assert page_rows(page) == "Revenue   235,467\nGross profit   57,589"
+
+
+def test_page_rows_keeps_close_rows_apart():
+    """Rows 11 pt apart (9 pt font) stay separate rows."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+    for n, label in enumerate(["Line one", "Line two", "Line three"]):
+        page.insert_text((70, 100 + 11 * n), label, fontsize=9)
+    assert page_rows(page) == "Line one\nLine two\nLine three"
