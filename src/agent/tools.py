@@ -8,6 +8,7 @@ zero denominator.
 Units:
 - percent_change, net_margin, roe return a percentage (12.5 means 12.5 %).
 - ratio, debt_to_equity return a plain ratio (1.8 means 1.8x).
+- difference, total return a figure in the same unit as their inputs.
 """
 
 from __future__ import annotations
@@ -47,6 +48,19 @@ def debt_to_equity(total_liabilities: float, total_equity: float) -> float:
     return round(_divide(total_liabilities, total_equity, "debt_to_equity"), 2)
 
 
+def difference(minuend: float, subtrahend: float) -> float:
+    """minuend - subtrahend, e.g. total assets - total liabilities = equity.
+    Inputs must be in the same unit; the result is in that unit."""
+    return round(minuend - subtrahend, 2)
+
+
+def total(values: list[float]) -> float:
+    """Sum of the values, e.g. the items of a subtotal. Same unit in, same unit out."""
+    if not values:
+        raise ValueError("total: no values given")
+    return round(sum(values), 2)
+
+
 # Name -> function, used by the agent to execute calculator tool calls.
 CALCULATORS: dict[str, Callable[..., float]] = {
     "percent_change": percent_change,
@@ -54,6 +68,8 @@ CALCULATORS: dict[str, Callable[..., float]] = {
     "net_margin": net_margin,
     "roe": roe,
     "debt_to_equity": debt_to_equity,
+    "difference": difference,
+    "total": total,
 }
 
 
@@ -124,4 +140,24 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "Debt-to-equity = total liabilities / total equity. Returns a plain ratio.",
         {"total_liabilities": "Total liabilities", "total_equity": "Total equity"},
     ),
+    _calculator_schema(
+        "difference",
+        "minuend - subtrahend (e.g. total assets - total liabilities, or 2024 value - 2022 value). "
+        "Both in the same unit; returns a figure in that unit.",
+        {"minuend": "Value to subtract from", "subtrahend": "Value to subtract"},
+    ),
+    {
+        "type": "function",
+        "function": {
+            "name": "total",
+            "description": "Sum of several values in the same unit; returns a figure in that unit.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "values": {"type": "array", "items": {"type": "number"}, "description": "Values to add"},
+                },
+                "required": ["values"],
+            },
+        },
+    },
 ]
