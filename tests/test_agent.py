@@ -93,17 +93,21 @@ def test_not_found_sets_found_false(monkeypatch):
     assert result.numbers == []
 
 
-def test_invented_citation_is_dropped(monkeypatch):
-    use_chat(
+def test_invented_citation_is_sent_back_once_then_dropped(monkeypatch):
+    bad = "Net income was 610,000 million KZT [halyk-2023-p87-0] [halyk-2023-p999-0]."
+    fake = use_chat(
         monkeypatch,
         [
             reply(tool_calls=[tool_call("c1", "search_reports", {"query": "net income", "year": 2023})]),
-            reply("Net income was 610,000 million KZT [halyk-2023-p87-0] [halyk-2023-p999-0]."),
+            reply(bad),
+            reply(bad),  # the model repeats it: the invented id is dropped
         ],
     )
 
     result = agent.answer("Halyk net income 2023?")
 
+    nudge = fake.calls[2][-1]
+    assert nudge["role"] == "user" and "halyk-2023-p999-0" in nudge["content"]
     assert [c.page for c in result.citations] == [87]
     assert "p999" not in result.text
 
@@ -174,6 +178,9 @@ def test_uses_given_retriever(monkeypatch):
         ("In 2023 net income was 693 435", [693435.0]),
         ("Loss of -1.234.567", [-1234567.0]),
         ("Two figures: 1,450,000 and 610 000", [1450000.0, 610000.0]),
+        ("For the year ended 31 December 2023: 693,436", [693436.0]),
+        ("Balance at December 31, 2024 was 769,921,817", [769921817.0]),
+        ("Growth of 31% in 2024", [31.0]),
     ],
 )
 def test_numbers_in_text(text, expected):
@@ -252,3 +259,85 @@ def test_system_prompt_rules_for_real_reports(monkeypatch):
     assert "always pass company=" in prompt
     assert f'"{agent.NOT_FOUND}."' in prompt
 
+
+
+# --- guards found in the first run on the real index (DECISIONS, 2026-11-18) ---
+
+
+def test_answer_without_search_is_sent_back(monkeypatch):
+    # Kcell case: the model answered from memory in step 1, citing an id it never got
+    fake = use_chat(
+        monkeypatch,
+        [
+            reply("Revenue rose from 627,617 to 704,544 million KZT [kcell-2024-p5-0]."),
+            reply(tool_calls=[tool_call("c1", "search_reports", {"query": "net income", "company": "Halyk Bank"})]),
+            reply("Net income was 610,000 million KZT [halyk-2023-p87-0]."),
+        ],
+    )
+
+    result = agent.answer("Halyk net income 2023?")
+
+    assert fake.calls[1][-1] == {"role": "user", "content": agent.NO_SEARCH_NUDGE}
+    assert result.found is True
+    assert [c.page for c in result.citations] == [87]
+
+
+def test_two_answers_without_search_give_not_found(monkeypatch):
+    memory = reply("Revenue rose from 627,617 to 704,544 million KZT, +12.3%.")
+    use_chat(monkeypatch, [memory, memory])
+
+    result = agent.answer("How did Kcell's revenue change from 2022 to 2024?")
+
+    assert result.found is False
+    assert result.text == agent.NO_SEARCH_ANSWER
+    assert result.numbers == [] and result.citations == []
+
+
+def test_not_found_without_search_is_accepted(monkeypatch):
+    # Kaspi case: a company we do not have, no search needed
+    fake = use_chat(monkeypatch, [reply("Not found in the reports.")])
+
+    result = agent.answer("What was Kaspi's net income in 2023?")
+
+    assert len(fake.calls) == 1
+    assert result.found is False
+
+
+def test_figures_without_valid_citation_give_not_found(monkeypatch):
+    # KEGOC case: the only source of the figure was an invented id
+    bad = "Total equity was 769,921,817 thousand tenge [kegoc-2024-p13-3]."
+    use_chat(
+        monkeypatch,
+        [
+            reply(tool_calls=[tool_call("c1", "search_reports", {"query": "total equity", "company": "KEGOC"})]),
+            reply(bad),
+            reply(bad),
+        ],
+    )
+
+    result = agent.answer("What was KEGOC's total equity at the end of 2024?")
+
+    assert result.found is False
+    assert result.text == agent.NO_SOURCE_ANSWER
+    assert result.citations == [] and result.numbers == []
+
+
+def test_search_limit_is_enforced_in_code(monkeypatch):
+    class CountingRetriever(StubRetriever):
+        calls = 0
+
+        def search(self, query, k=5, company=None, year=None):
+            CountingRetriever.calls += 1
+            return super().search(query, k, company, year)
+
+    searches = [
+        reply(tool_calls=[tool_call(f"c{i}", "search_reports", {"query": "net income"})])
+        for i in range(agent.MAX_SEARCHES + 1)
+    ]
+    fake = use_chat(monkeypatch, searches + [reply("Not found in the reports.")])
+
+    agent.answer("Halyk net income 2023?", retriever=CountingRetriever())
+
+    assert CountingRetriever.calls == agent.MAX_SEARCHES
+    last_tool = [m for m in fake.calls[-1] if m["role"] == "tool"][-1]
+    assert json.loads(last_tool["content"]) == {"error": agent.SEARCH_LIMIT_ERROR}
