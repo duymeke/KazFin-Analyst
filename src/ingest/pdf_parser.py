@@ -29,6 +29,7 @@ import pdfplumber
 import pymupdf
 
 from src.ingest.manifest import company_slug
+from src.ingest.ocr_fixes import OcrFix, apply_fixes
 from src.models import Chunk
 
 CHUNK_SIZE = 1000
@@ -69,21 +70,32 @@ class ParseResult:
     page_count: int
     pages_without_tables: int = 0  # pages with text where pdfplumber found no usable table
     problems: list[tuple[int, str]] = field(default_factory=list)  # (page, description)
+    fixes_applied: int = 0  # hand-checked OCR fixes from data/ocr_fixes.json
 
 
 def parse_pdf(
-    path: str | Path, company: str, year: int, source_name: str | None = None
+    path: str | Path,
+    company: str,
+    year: int,
+    source_name: str | None = None,
+    fixes: list[OcrFix] | None = None,
 ) -> list[Chunk]:
     """Parse one report PDF into text and table chunks with 1-based page numbers.
 
     `source_name` is the file name stored in chunks (default: the name of `path`);
     build_index passes the original name when it parses the OCR copy.
+    `fixes` are hand-checked OCR corrections for this file (src/ingest/ocr_fixes.py),
+    applied to the page text before it is split into chunks.
     """
-    return parse_pdf_with_report(path, company, year, source_name).chunks
+    return parse_pdf_with_report(path, company, year, source_name, fixes).chunks
 
 
 def parse_pdf_with_report(
-    path: str | Path, company: str, year: int, source_name: str | None = None
+    path: str | Path,
+    company: str,
+    year: int,
+    source_name: str | None = None,
+    fixes: list[OcrFix] | None = None,
 ) -> ParseResult:
     """Like parse_pdf(), but also returns page counts and parsing problems."""
     path = Path(path)
@@ -92,12 +104,18 @@ def parse_pdf_with_report(
     chunks: list[Chunk] = []
     problems: list[tuple[int, str]] = []
     pages_without_tables = 0
+    fixes_applied = 0
+    fixes = fixes or []
 
     with pymupdf.open(path) as doc, pdfplumber.open(path) as plumber:
         page_count = len(doc)
         for index, page in enumerate(doc):
             page_no = index + 1
             text = normalize_numbers(page_rows(page))
+            if fixes:
+                text, n_applied, fix_problems = apply_fixes(text, page_no, fixes)
+                fixes_applied += n_applied
+                problems.extend((page_no, problem) for problem in fix_problems)
             if not text.strip():
                 if page.get_images():
                     problems.append((page_no, "no text layer, image only (scanned?)"))
@@ -140,7 +158,7 @@ def parse_pdf_with_report(
                     )
                 )
 
-    return ParseResult(chunks, page_count, pages_without_tables, problems)
+    return ParseResult(chunks, page_count, pages_without_tables, problems, fixes_applied)
 
 
 def page_rows(page: pymupdf.Page) -> str:
