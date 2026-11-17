@@ -1,12 +1,21 @@
 """Agent loop tests with a scripted fake chat(): no network, no API key."""
 
 import json
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
 from src.agent import agent
 from src.agent.stub_retriever import StubRetriever
+
+REAL_DEFAULT_RETRIEVER = agent._default_retriever
+
+
+@pytest.fixture(autouse=True)
+def _stub(monkeypatch):
+    """Keep every test offline: answer() without a retriever gets the stub data."""
+    monkeypatch.setattr(agent, "_default_retriever", StubRetriever)
 
 
 def tool_call(call_id, name, args):
@@ -155,6 +164,16 @@ def test_uses_given_retriever(monkeypatch):
         ("Grew 17.31% in 2023", [17.31]),
         ("See page 87 for 1,450,000 million KZT", [1450000.0]),
         ("Loss of -12.5 in 2024", [-12.5]),
+        ("Net income was 693 435 million KZT", [693435.0]),
+        ("Total assets 1 097 066 105 thousand KZT", [1097066105.0]),
+        ("Total assets 1.097.066.105 thousand KZT", [1097066105.0]),
+        ("No-break spaces: 693\u00a0435 and 1\u202f234", [693435.0, 1234.0]),
+        ("Decimals stay: 17.31% and 5.8", [17.31, 5.8]),
+        ("One dot is a decimal: 569.653", [569.653]),
+        ("Space thousands with decimals: 12 345.67", [12345.67]),
+        ("In 2023 net income was 693 435", [693435.0]),
+        ("Loss of -1.234.567", [-1234567.0]),
+        ("Two figures: 1,450,000 and 610 000", [1450000.0, 610000.0]),
     ],
 )
 def test_numbers_in_text(text, expected):
@@ -186,3 +205,50 @@ def test_two_empty_replies_give_not_found(monkeypatch):
     assert len(fake.calls) == 2
     assert result.found is False
     assert result.text  # never an empty answer
+
+
+def test_missing_index_gives_clear_error(monkeypatch, tmp_path):
+    monkeypatch.setattr(agent, "_default_retriever", REAL_DEFAULT_RETRIEVER)
+    monkeypatch.setattr(agent, "INDEX_DIR", tmp_path / "no-index")
+    REAL_DEFAULT_RETRIEVER.cache_clear()
+    use_chat(monkeypatch, [])  # chat() must not be called at all
+
+    with pytest.raises(FileNotFoundError, match=r"python -m scripts\.build_index"):
+        agent.answer("Halyk net income 2023?")
+    REAL_DEFAULT_RETRIEVER.cache_clear()
+
+
+def test_default_retriever_is_opened_once(monkeypatch, tmp_path):
+    opened = []
+
+    class FakeRetriever:
+        def __init__(self, index_dir):
+            opened.append(index_dir)
+
+    fake_module = ModuleType("src.ingest.retriever")
+    fake_module.Retriever = FakeRetriever
+    monkeypatch.setitem(sys.modules, "src.ingest.retriever", fake_module)
+    monkeypatch.setattr(agent, "INDEX_DIR", tmp_path)
+    REAL_DEFAULT_RETRIEVER.cache_clear()
+
+    first = REAL_DEFAULT_RETRIEVER()
+    second = REAL_DEFAULT_RETRIEVER()
+
+    assert first is second
+    assert opened == [tmp_path]
+    REAL_DEFAULT_RETRIEVER.cache_clear()
+
+
+def test_system_prompt_rules_for_real_reports(monkeypatch):
+    fake = use_chat(monkeypatch, [reply("Not found in the reports.")])
+    agent.answer("q")
+    prompt = fake.calls[0][0]["content"]
+
+    assert fake.calls[0][0]["role"] == "system"
+    assert "thousands of tenge" in prompt and "millions of tenge" in prompt  # units
+    assert "state the unit" in prompt
+    assert "year=Y+1" in prompt and "comparative" in prompt  # X-1 column fallback
+    assert "statement of profit or loss" in prompt  # main statements over notes
+    assert "always pass company=" in prompt
+    assert f'"{agent.NOT_FOUND}."' in prompt
+
