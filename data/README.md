@@ -138,3 +138,22 @@ The parser rewrites numbers with two or more dot-separated groups of exactly 3 d
 they are, because they may be decimals: in KEGOC files `569.653` (thousands) or `2.780` (book
 value per share, tenge) stay with a dot. On OCR pages Tesseract also mixes the separators
 (`148,922.757`, `5.588895`); these are not normalized either.
+
+## Retrieval test set (`data/retrieval_cases.json`)
+
+Measures how high the search ranks the page that holds a figure:
+
+```bash
+python -m scripts.eval_retrieval -v        # hybrid search (default)
+python -m scripts.eval_retrieval --dense   # vector search only, for comparison
+```
+
+- Each case: query, company, year, the **value** of the figure for that year, taken from the main
+  statement and checked by hand against the page image, the statement page, and every page of
+  the report where the value occurs (matched by digits only; separators ignored; parentheses
+  allowed for negatives).
+- **strict** counts only the statement page; **lenient** counts any page with the value (notes
+  often repeat the figure).
+- `dev` (13 cases) may be used to tune the search. `heldout` (21 cases) was committed before the
+  hybrid search code and **must never be tuned on**. To add held-out cases, add them in a separate
+  commit before any change to the search.
