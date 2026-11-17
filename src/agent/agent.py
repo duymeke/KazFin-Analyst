@@ -10,6 +10,13 @@ Flow for one question:
      with [chunk_id]; ids the LLM made up are dropped
    - numbers: calculator results first, then figures written in the text
    - found=False if the LLM said "Not found in the reports"
+
+Guards in code, because the model does not always follow the prompt:
+- a final answer before any search_reports call is sent back once; a second
+  one gives found=False (the model answered from its own knowledge)
+- a final answer that cites chunk ids search never returned is sent back once
+- figures with no valid citation give found=False instead of an unsourced answer
+- after MAX_SEARCHES searches, search_reports returns an error to the model
 """
 
 from __future__ import annotations
@@ -25,11 +32,22 @@ from src.agent.llm import chat
 from src.agent.tools import CALCULATORS, TOOL_SCHEMAS
 from src.models import Answer, Chunk, Citation
 
-MAX_STEPS = 8  # up to 3 searches per figure (year Y, then Y+1) and a calculator
+MAX_STEPS = 10  # up to MAX_SEARCHES searches, a calculator, two nudges and the answer
+MAX_SEARCHES = 4
 INDEX_DIR = Path(__file__).resolve().parents[2] / "data" / "index"
 INDEX_MISSING = "Index not found. Run: python -m scripts.build_index"
 NOT_FOUND = "Not found in the reports"
 EMPTY_REPLY_NUDGE = "Your last reply was empty. Give your final answer now, following the rules."
+NO_SEARCH_NUDGE = (
+    "You answered without calling search_reports. Never use your own knowledge for figures: "
+    f'call search_reports now, or reply exactly "{NOT_FOUND}."'
+)
+SEARCH_LIMIT_ERROR = (
+    f"search limit reached ({MAX_SEARCHES} searches). Answer from the chunks you already have, "
+    f'or reply "{NOT_FOUND}."'
+)
+NO_SEARCH_ANSWER = f"{NOT_FOUND}: the model answered without searching the reports."
+NO_SOURCE_ANSWER = f"{NOT_FOUND}: the answer had figures but no source in the reports."
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +67,9 @@ Rules:
 _CITE_RE = re.compile(r"\[([A-Za-z0-9_.:-]+)\]")
 _NUMBER_RE = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
 _PAGE_RE = re.compile(r"\b(?:p\.|page|pages)\s*\d+", re.IGNORECASE)
+_MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December"
+# "31 December" and "December 31": the day is not a figure (the year is skipped below)
+_DATE_RE = re.compile(rf"\b\d{{1,2}}\s+(?:{_MONTHS})\b|\b(?:{_MONTHS})\s+\d{{1,2}}\b(?!\d)")
 # 1.097.066.105: two or more dot groups of 3 digits. One dot (17.31, 569.653)
 # stays a decimal, because it cannot be told apart from a thousands separator.
 _DOT_THOUSANDS_RE = re.compile(r"(?<![\d.,])-?\d{1,3}(?:\.\d{3}){2,}(?![\d.])")
@@ -83,8 +104,11 @@ def answer(question: str, retriever: Any = None) -> Answer:
     ]
     seen_chunks: dict[str, Chunk] = {}
     computed: list[float] = []
+    searches = [0]  # a list so _run_tool can count searches
 
     nudged = False
+    nudged_search = False
+    nudged_citations = False
 
     for step in range(1, MAX_STEPS + 1):
         reply = chat(messages, tools=TOOL_SCHEMAS)
@@ -94,6 +118,23 @@ def answer(question: str, retriever: Any = None) -> Answer:
         if not tool_calls:
             if content:
                 log.info("step %d: final answer: %s", step, content)
+                not_found = NOT_FOUND.lower() in content.lower()
+                if not not_found and searches[0] == 0:
+                    if nudged_search:
+                        log.info("step %d: answered twice without searching", step)
+                        return Answer(text=NO_SEARCH_ANSWER, found=False)
+                    log.info("step %d: no search before the answer, asking to search", step)
+                    nudged_search = True
+                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "user", "content": NO_SEARCH_NUDGE})
+                    continue
+                invented = [i for i in dict.fromkeys(_CITE_RE.findall(content)) if i not in seen_chunks]
+                if not not_found and invented and not nudged_citations:
+                    log.info("step %d: cited ids search never returned: %s", step, invented)
+                    nudged_citations = True
+                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "user", "content": _citation_nudge(invented)})
+                    continue
                 return _build_answer(content, seen_chunks, computed)
             # Some models (often reasoning ones) return neither text nor tool
             # calls. Ask once more instead of returning an empty answer.
@@ -107,7 +148,9 @@ def answer(question: str, retriever: Any = None) -> Answer:
         messages.append(_assistant_message(reply, tool_calls))
         for call in tool_calls:
             log.info("step %d: call %s(%s)", step, call.function.name, call.function.arguments)
-            result = _run_tool(call.function.name, call.function.arguments, retriever, seen_chunks, computed)
+            result = _run_tool(
+                call.function.name, call.function.arguments, retriever, seen_chunks, computed, searches
+            )
             log.info("step %d: result %s", step, result if len(result) <= 500 else result[:500] + "...")
             messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
     else:
@@ -119,6 +162,15 @@ def answer(question: str, retriever: Any = None) -> Answer:
     return Answer(
         text=f"{NOT_FOUND}: the model returned an empty answer. Try again or use another model.",
         found=False,
+    )
+
+
+def _citation_nudge(invented: list[str]) -> str:
+    """Message sent back when the answer cites ids that search_reports never returned."""
+    return (
+        f"These ids were never returned by search_reports: {', '.join(invented)}. "
+        "Cite only ids from the search results. If a figure is not in them, search again "
+        f'or reply "{NOT_FOUND}."'
     )
 
 
@@ -144,6 +196,7 @@ def _run_tool(
     retriever: Any,
     seen_chunks: dict[str, Chunk],
     computed: list[float],
+    searches: list[int] | None = None,
 ) -> str:
     """Execute one tool call and return its result as a JSON string for the LLM.
 
@@ -156,6 +209,10 @@ def _run_tool(
         return json.dumps({"error": "arguments are not valid JSON"})
 
     if name == "search_reports":
+        if searches is not None:
+            if searches[0] >= MAX_SEARCHES:
+                return json.dumps({"error": SEARCH_LIMIT_ERROR})
+            searches[0] += 1
         try:
             chunks = retriever.search(
                 args.get("query", ""),
@@ -201,7 +258,11 @@ def _build_answer(text: str, seen_chunks: dict[str, Chunk], computed: list[float
         return f"({chunk.company} {chunk.year}, p. {chunk.page})"
 
     without_markers = _CITE_RE.sub("", text)
-    numbers = list(dict.fromkeys(computed + _numbers_in_text(without_markers)))
+    figures = _numbers_in_text(without_markers)
+    if not citations and (figures or computed):
+        # figures the reader cannot check against a page are not an answer
+        return Answer(text=NO_SOURCE_ANSWER, found=False)
+    numbers = list(dict.fromkeys(computed + figures))
     clean_text = re.sub(r"[ \t]+([.,;])", r"\1", _CITE_RE.sub(replace, text)).strip()
     return Answer(text=clean_text, citations=citations, numbers=numbers)
 
@@ -224,6 +285,7 @@ def _numbers_in_text(text: str) -> list[float]:
     dots when there are at least two of them (1.097.066.105).
     """
     text = _PAGE_RE.sub("", text)
+    text = _DATE_RE.sub("", text)
     text = _DOT_THOUSANDS_RE.sub(lambda m: m.group().replace(".", ","), text)
     text = _SPACE_THOUSANDS_RE.sub(lambda m: re.sub(r"[ \u00a0\u202f]", ",", m.group()), text)
     numbers = []
