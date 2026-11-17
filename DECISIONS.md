@@ -259,3 +259,18 @@ with this equity; it is not: that total is the known OCR misread (1,087,066,105 
 
 **Kcell to be rerun:** Dinmukhamed is fixing rotated pages (Kcell 2024, KEGOC 2023) in ingest,
 so the Kcell question is rerun only after his PR is merged and the index is rebuilt.
+
+### Guards in code instead of prompt rules only
+The run showed that the model does not keep the prompt rules, so `agent.py` now checks them:
+- **No search, no answer.** A final answer before any `search_reports` call (the Kcell case) is
+  sent back once with "call search_reports now"; a second one gives `found=False`.
+  "Not found in the reports" without a search is still accepted (the Kaspi case).
+- **Invented citations are sent back once.** If the answer cites ids that search never returned
+  (the KEGOC `p13-3` case), the model is told which ids are wrong and asked to fix them.
+- **No figures without a source.** If the final answer has figures but no valid citation, the
+  user gets "Not found in the reports: the answer had figures but no source in the reports" and
+  `found=False`, instead of figures they cannot check.
+- **Search limit in code.** After `MAX_SEARCHES = 4` searches `search_reports` returns an error
+  to the model. `MAX_STEPS` went from 8 to 10 so the two nudges fit.
+- Days in dates ("31 December", "December 31") are no longer counted as figures.
+Each case from the run has a test with a scripted `chat()` in `tests/test_agent.py`.
