@@ -227,3 +227,35 @@ offline (7 tests call `answer()` without a retriever).
 `_numbers_in_text` reads `693 435` and `1.097.066.105` as whole numbers. A single dot stays a
 decimal (`17.31`, and also `569.653`), because one dot cannot be told apart from a thousands
 separator. The prompt asks the model to write commas, so this is a fallback.
+
+### Step 5: first run on the real index (agent was wrong in 2 of 4)
+Run on branch `agent/real-retriever` (e6272aa), index of `main` after PR #5 (OCR), model
+`baidu/ernie-5.5-flash-preview:free`. `pytest`: 154 passed.
+
+| Question | Answer | Cited | Verdict |
+|---|---|---|---|
+| Halyk net income 2023 | 693,436 million KZT | p. 13, p. 153 | ✅ matches "NET INCOME 693,436" on the profit or loss statement (p. 12). p. 14 shows 693,435, which the agent did not take. |
+| KEGOC total equity end of 2024 | 769,921,817 thousand KZT | p. 9 only | ⚠️ figure is right, citation is not (below) |
+| Kcell revenue 2022 → 2024 | 627,617 → 704,544 million KZT, +12.3% | none | ❌ made up (below) |
+| Kaspi net income 2023 | "Not found in the reports" | none | ✅ |
+
+**Kcell: no tool call at all (agent was wrong).** The model answered in step 1 from its own
+knowledge: no `search_reports`, no calculator. It cited `[kcell-2024-p5-0]`, an id it never
+received, so our filter dropped it and the answer had **no citations but `found=True`**. The
+figures are about 3x too high (Kcell's own release gives 2022 revenue of 221,232 million KZT),
+and "+12.3% (calculator)" was the model's own arithmetic (the calculator would give 12.26).
+**How we noticed:** the `-v` log shows `step 1: final answer` with no `call` line, and
+`ask.py` printed no "Sources". The prompt rule "always call search_reports" is not enough;
+the code must not accept a figure without a citation.
+
+**KEGOC: right figure, invented citation.** 769,921,817 = total assets 1,097,066,105 (text
+layer, p. 8) − total liabilities 327,144,288, so the figure is consistent. But the model cited
+`[kegoc-2024-p13-3]`, which search never returned (it returned `p13-0`), so the only citation
+left is p. 9, the OCR page. The answer also says the p. 9 total 1,087,066,105 is "consistent"
+with this equity; it is not: that total is the known OCR misread (1,087,066,105 − 327,144,288
+= 759,921,817). The agent made 6 searches although the prompt allows 3, and used 7 of 8 steps.
+
+**Small bug:** "Key numbers" contains `31` from "31 December" (Halyk and KEGOC answers).
+
+**Kcell to be rerun:** Dinmukhamed is fixing rotated pages (Kcell 2024, KEGOC 2023) in ingest,
+so the Kcell question is rerun only after his PR is merged and the index is rebuilt.
