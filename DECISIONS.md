@@ -198,3 +198,32 @@ The new file has 56 pages (the 2024 report has 63), the statements are "for the 
 31 December 2022" with 2021 comparatives, no "31 December 2024" appears, and no page is identical
 to `kegoc_2023.pdf` or `kegoc_2024.pdf`. `ocr_reports` now also redoes a file when the raw PDF is
 newer than its OCR copy, so a replaced report does not keep an old OCR copy.
+
+## 2026-11-18 · Agent on the real retriever (Berikzhan)
+
+### The real Retriever is the default, opened once
+`answer(question, retriever=None)` now uses `_default_retriever()`, which opens `data/index`
+once per process (`functools.lru_cache`), instead of `StubRetriever`. If `data/index` does not
+exist it raises `FileNotFoundError("Index not found. Run: python -m scripts.build_index")`
+before any LLM call, and `scripts/ask.py` prints it as a setup error, not as "LLM request
+failed". `Retriever` is imported inside the function, so `src/agent/agent.py` still imports
+without chromadb. The `retriever` parameter stays, so tests and eval can pass a stub.
+`tests/test_agent.py` has an autouse fixture that swaps in `StubRetriever`, so the tests stay
+offline (7 tests call `answer()` without a retriever).
+
+### Prompt rules for real financial statements
+- **Units.** Every figure is given with its unit: KEGOC reports in thousands of tenge, Halyk
+  and Kcell in millions. Without this a KEGOC figure could be read as millions (1000x error);
+  the parser already prefixes chunks with `Units: ...`.
+- **Comparative column.** The report for year X also has year X-1. For year Y the agent searches
+  year Y first, then the Y+1 report, and must take the column of the year asked.
+- **Main statements over notes**, and an OCR row without a label or with inconsistent numbers is
+  replaced by the same figure from a text page (KEGOC 2024 page 9 has known OCR digit errors).
+- **Always pass `company=`**, so a company we do not have (e.g. Kaspi) returns no chunks instead
+  of chunks from another company.
+- Up to three searches before "Not found", so `MAX_STEPS` went from 6 to 8.
+
+### Numbers with spaces and dots in the answer
+`_numbers_in_text` reads `693 435` and `1.097.066.105` as whole numbers. A single dot stays a
+decimal (`17.31`, and also `569.653`), because one dot cannot be told apart from a thousands
+separator. The prompt asks the model to write commas, so this is a fallback.
