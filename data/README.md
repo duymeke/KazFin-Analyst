@@ -90,6 +90,43 @@ The text layer of the other pages (changes in equity, cash flows, notes) is exac
 `python -m scripts.ocr_reports` prints the count per file; `python -m scripts.build_index`
 reports any page that is still without text.
 
+## OCR fixes (`data/ocr_fixes.json`)
+
+OCR misreads digits and words, and some of those errors change the answer (KEGOC 2024 p. 9:
+"Total equity and abilities 1,087,066,105" instead of "Total equity and liabilities
+1,097,066,105"). `data/ocr_fixes.json` holds hand-checked corrections; it is in git.
+
+```json
+{"file": "kegoc_2024.pdf", "page": 9,
+ "old": "Retained earnings   64,089,351   8,259,455",
+ "new": "Retained earnings   64,089,351   48,259,455",
+ "checked": "page image, 2026-11-17"}
+```
+
+- A fix replaces **one whole row** of the page text as the parser builds it (after `1.097.066.105`
+  → `1,097,066,105`). Copy `old` exactly from the parsed text, including the three-space column
+  gaps and any OCR noise such as `‘`.
+- It is applied only when the `old` row occurs on that page exactly once. Otherwise `build_index`
+  prints `! OCR fix not applied (...)` and leaves the text as it is, so a fix that no longer fits
+  (e.g. after OCR was redone) is visible, not silent.
+- Fixes apply only to OCR copies in `data/ocr/`, not with `build_index --no-ocr`.
+- **Add a fix only after checking the row against the page image**, and check that the
+  statement's totals add up after the fix. Never add labels or figures that are not on the page.
+- Current fixes: 17 rows of `kegoc_2024.pdf` p. 9 (balance sheet, equity and liabilities).
+
+## Rotated pages
+
+Some statement pages are landscape scans stored with a page rotation (`/Rotate 90` or `270`).
+The parser maps word positions to the page as it is displayed before it builds rows, so these
+pages read normally (fixed on 18 Nov 2026; before that their text in the index was garbled).
+
+| File | Rotated pages |
+|---|---|
+| `halyk_2022.pdf` | 14 |
+| `halyk_2024.pdf` | 13 |
+| `kegoc_2023.pdf` | 9–10, 12–13 |
+| `kcell_2024.pdf` | 8–12 (all primary statements) |
+
 ## Units
 
 The statements give units once per page: Halyk Bank in millions of tenge, Kcell in millions of
@@ -101,3 +138,22 @@ The parser rewrites numbers with two or more dot-separated groups of exactly 3 d
 they are, because they may be decimals: in KEGOC files `569.653` (thousands) or `2.780` (book
 value per share, tenge) stay with a dot. On OCR pages Tesseract also mixes the separators
 (`148,922.757`, `5.588895`); these are not normalized either.
+
+## Retrieval test set (`data/retrieval_cases.json`)
+
+Measures how high the search ranks the page that holds a figure:
+
+```bash
+python -m scripts.eval_retrieval -v        # hybrid search (default)
+python -m scripts.eval_retrieval --dense   # vector search only, for comparison
+```
+
+- Each case: query, company, year, the **value** of the figure for that year, taken from the main
+  statement and checked by hand against the page image, the statement page, and every page of
+  the report where the value occurs (matched by digits only; separators ignored; parentheses
+  allowed for negatives).
+- **strict** counts only the statement page; **lenient** counts any page with the value (notes
+  often repeat the figure).
+- `dev` (13 cases) may be used to tune the search. `heldout` (21 cases) was committed before the
+  hybrid search code and **must never be tuned on**. To add held-out cases, add them in a separate
+  commit before any change to the search.

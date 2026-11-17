@@ -27,6 +27,7 @@ from src.ingest.manifest import (
     load_manifest,
     source_path,
 )
+from src.ingest.ocr_fixes import DEFAULT_OCR_FIXES, load_ocr_fixes
 from src.ingest.pdf_parser import ParseResult, parse_pdf_with_report
 from src.models import Chunk
 
@@ -56,11 +57,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--raw-dir", default=DEFAULT_RAW_DIR)
     parser.add_argument("--ocr-dir", default=DEFAULT_OCR_DIR)
     parser.add_argument("--no-ocr", action="store_true", help="ignore data/ocr/, parse raw PDFs")
+    parser.add_argument("--ocr-fixes", default=DEFAULT_OCR_FIXES)
     parser.add_argument("--index-dir", default=DEFAULT_INDEX_DIR)
     args = parser.parse_args(argv)
     started = time.perf_counter()
 
     manifest = load_manifest(args.manifest)
+    ocr_fixes = load_ocr_fixes(args.ocr_fixes)
     all_chunks: list[Chunk] = []
     text_hashes: dict[str, str] = {}
 
@@ -79,13 +82,20 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{entry.file:<16} MISSING: {path}")
             continue
 
-        result = parse_pdf_with_report(path, entry.company, entry.year, source_name=entry.file)
+        # fixes are written for the OCR text, so they apply only to the OCR copy
+        is_ocr_copy = not args.no_ocr and path.parent.resolve() == Path(args.ocr_dir).resolve()
+        fixes = ocr_fixes.get(entry.file, []) if is_ocr_copy else []
+        result = parse_pdf_with_report(
+            path, entry.company, entry.year, source_name=entry.file, fixes=fixes
+        )
         n_text = sum(1 for c in result.chunks if c.kind == "text")
         n_table = len(result.chunks) - n_text
         print(
             f"{entry.file:<16} {result.page_count:>5} {n_text:>6} {n_table:>6} "
             f"{len(result.chunks):>6} {result.pages_without_tables:>15}  {path.parent.name}/"
         )
+        if result.fixes_applied:
+            print(f"      OCR fixes applied: {result.fixes_applied} of {len(fixes)}")
         _print_problems(result)
 
         digest = hashlib.sha256("".join(c.text for c in result.chunks).encode()).hexdigest()

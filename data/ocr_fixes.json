@@ -1,0 +1,124 @@
+{
+  "_about": "Hand-checked corrections of OCR text. Each fix replaces one whole row of a page as the parser builds it. Add only rows checked against the page image. See data/README.md.",
+  "fixes": [
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "_CONSOLIDATED STATEMENT OF FINANCIAL POSITION (continued)",
+      "new": "CONSOLIDATED STATEMENT OF FINANCIAL POSITION (continued)",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "‘34 December   31 December",
+      "new": "31 December   31 December",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "‘Share capital   14   148,922.757   148,922,757,",
+      "new": "Share capital   14   148,922,757   148,922,757",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Retained earnings   64,089,351   8,259,455",
+      "new": "Retained earnings   64,089,351   48,259,455",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Borrowings, non-current portion   18   5,310,373   5.588895",
+      "new": "Borrowings, non-current portion   15   5,310,373   5,588,895",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Bonds payable, non-current portion   16   149,650.031   149,521,918",
+      "new": "Bonds payable, non-current portion   16   149,650,031   149,521,918",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Long-term payables   WwW   -   2,163,124",
+      "new": "Long-term payables   17   -   2,163,124",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Deferred income, non-current portion   569.653   622.896",
+      "new": "Deferred income, non-current portion   569,653   622,896",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "289,230.176   277,539,503",
+      "new": "289,230,176   277,539,503",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Trade and other accounts payable, current portion   7   17,873,658   19,721,022",
+      "new": "Trade and other accounts payable, current portion   17   17,573,658   19,721,022",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Contract liabiities   2,008,832   1,185,059",
+      "new": "Contract liabilities   2,006,832   1,185,059",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Deferred income, current portion   53.243   53.243,",
+      "new": "Deferred income, current portion   53,243   53,243",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "‘Taxes payable other than income tax   18   4,993,823   3,426,356",
+      "new": "Taxes payable other than income tax   18   4,993,823   3,426,356",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Income tax payable   25   17.405   -",
+      "new": "Income tax payable   25   17,405   -",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Total liabilities   327,144,288   316,065,873,",
+      "new": "Total liabilities   327,144,288   316,065,873",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Total equity and abilities   1,087,066,105   _1,001.785.007",
+      "new": "Total equity and liabilities   1,097,066,105   1,001,785,007",
+      "checked": "page image, 2026-11-17"
+    },
+    {
+      "file": "kegoc_2024.pdf",
+      "page": 9,
+      "old": "Book value per ordinary share (in tenge)   44   2.780   2.479",
+      "new": "Book value per ordinary share (in tenge)   14   2,780   2,479",
+      "checked": "page image, 2026-11-17"
+    }
+  ]
+}

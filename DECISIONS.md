@@ -199,6 +199,142 @@ The new file has 56 pages (the 2024 report has 63), the statements are "for the 
 to `kegoc_2023.pdf` or `kegoc_2024.pdf`. `ocr_reports` now also redoes a file when the raw PDF is
 newer than its OCR copy, so a replaced report does not keep an old OCR copy.
 
+## 2026-11-18 · Rotated and skewed statement pages (Dinmukhamed)
+
+### Rotated pages were garbled in the index (bug in our parser)
+**How we noticed:** Berikzhan's first run of the agent on the real retriever. For "How did
+Kcell's revenue change from 2022 to 2024?" the agent answered with invented figures, and when we
+looked for the real 2024 revenue, the OCR text of the Kcell 2024 statement pages (8–12) was a
+list of single words ("Net In / Chief Chief Basic Total Other Profit ..."). These pages are
+landscape scans stored with `/Rotate 270`. PyMuPDF gives word positions on the unrotated page,
+so `page_rows` grouped the words of one column into a "row". The same happened on Halyk 2022
+p. 14, Halyk 2024 p. 13 and KEGOC 2023 pp. 9–10, 12–13 (the equity and liabilities half of the
+balance sheet). OCR itself was fine. **Fix:** `page_rows` maps every word with
+`page.rotation_matrix` before grouping. Tests build a page with `/Rotate 90` and `270`; they fail
+on the old parser.
+
+### Numbers on skewed scans fell into the next row
+After the rotation fix, the Kcell 2024 rows still came out as "Revenue from contracts with
+customers 22" and, on the next line, "235,467 223,747". The scan is slightly skewed, so the
+numbers sit 3–4 pt below their label, and the row tolerance was a fixed 3 pt. **Fix:** two words
+are on one row when their vertical centres differ by at most max(3 pt, half the word height).
+Rows in these PDFs are at least ~11 pt apart, so separate rows stay separate (tested).
+**Effect on other pages:** we compared the old and new parser on every page of all 9 files.
+Besides the 12 rotated pages, 44 OCR pages and 15 text-layer pages changed. On tables, a label and
+its numbers that were split are now one row (e.g. "Unallocated 58,011" in the Halyk segment
+note). On two-column auditor's report pages the two columns are now side by side in one row
+instead of alternating lines; these pages have no figures. A scan for rows where two different
+table rows were merged found none (one hit was OCR noise in one row).
+
+### Results
+The index has 2,868 chunks (was 2,866). On the fixed pages all subtotals add up: KEGOC 2023
+balance sheet (both columns: equity, non-current, current, total liabilities, total equity and
+liabilities) and the Kcell 2024 statement of comprehensive income (gross profit, operating profit,
+profit before tax, profit for the year, both years). The 2023 column of KEGOC 2023 p. 9 matches
+the comparative column of KEGOC 2024 p. 9 as read from the image, including retained earnings
+48,259,455, which OCR misread on the 2024 page. Kcell revenue: 235,467 (2024), 223,747 (2023),
+219,002 (2022) million tenge; 2023 matches the separate `kcell_2023.pdf`.
+
+### Still open: statement pages rank low for short queries
+The text is now right, but the embedding search ranks notes above the statements: Kcell 2024
+p. 9 is rank 22 for "revenue" and rank 1 for "statement of comprehensive income revenue from
+contracts with customers"; KEGOC 2023 p. 9 is rank 6 for "total equity". Improving the ranking
+(e.g. a keyword match on row labels, or preferring statement pages) is the next retrieval task.
+
+## 2026-11-18 · Hand-checked OCR fixes (Dinmukhamed)
+
+### OCR errors changed the agent's answer
+After the rotation fix, the second agent run answered "KEGOC's total equity at the end of 2024"
+with **1,087,066,105** instead of 769,921,817. The OCR text of KEGOC 2024 p. 9 read the row
+"Total equity and liabilities 1.097.066.105" as "Total equity **and abilities** 1,0**8**7,066,105",
+and the real equity total is a row without a label in the PDF. So one chunk had "Total equity"
+next to a wrong number, and the model took it, although it also saw 769,921,817 on p. 13.
+
+### Decision: a file of hand-checked fixes instead of more OCR
+`data/ocr_fixes.json` (in git) lists corrections per file and page; the parser applies them to
+the page text before chunking. Each fix replaces one whole row and is applied only when that row
+occurs on the page exactly once; otherwise `build_index` reports it and changes nothing.
+We chose this over re-running OCR with other settings: there is no guarantee that new settings
+fix exactly these digits, and they could break pages that are right now. A fix is added only
+after checking the row against the page image and checking that the totals add up. Labels that
+are missing in the PDF (the unlabelled equity total) are **not** added, so the index never
+contains text that is not in the report.
+
+### Results
+17 rows of KEGOC 2024 p. 9 fixed: 4 digits (retained earnings 2023 48,259,455; trade payables
+2024 17,573,658; contract liabilities 2024 2,006,832; total equity and liabilities 2024
+1,097,066,105), the label "abilities", 4 note numbers, mixed separators (`148,922.757`,
+`5.588895`), stray characters (`‘`, `_`, trailing commas) and single-dot thousands on this page
+(`569.653` → `569,653`, book value per share `2.780` → `2,780` tenge). Checked in code after the
+fixes: equity, non-current, current, total liabilities and total equity and liabilities add up
+in both columns (before: 3 of these did not). `build_index` reports "OCR fixes applied: 17 of 17".
+
+Agent run on `agent/real-retriever` (6e03e66), the same question twice: both answers are
+769,921,817 thousand tenge (was 1,087,066,105). In the second run the model computed
+1,097,066,105 − 327,144,288 itself instead of calling a calculator; passed to Berikzhan.
+The agent still needs 4–5 searches to reach the statement pages (ranking, see above).
+
+## 2026-11-18 · Hybrid search: vector + BM25 + table rows (Dinmukhamed)
+
+### Why
+Vector search alone ranked the notes above the statements. For "revenue" (Kcell 2024) the
+statement page was rank 22: the notes use the word in many sentences, the statement uses it once,
+next to the figure. The agent then needed 4–6 searches and sometimes took a figure from a note
+or an OCR error instead of the statement.
+
+### Test set first
+`data/retrieval_cases.json` was committed (6d02ab8) **before** the search code (c23e587).
+- 13 **dev** cases: the queries the agent actually sent; the row signal below was designed on them.
+- 21 **held-out** cases: written before the search was changed and never tuned on.
+
+Targets are chosen **by value**: we first selected pages by row label, but that rule is almost the
+same as the new row signal (it would favour the new method), and it both missed pages (EPS
+`50.84` has no comma) and added wrong ones ("Total assets classified as held for sale").
+Each held-out value was checked by hand against the PDF image (Dinmukhamed), and each extra page
+with the same digits was checked to hold the same figure (e.g. Halyk 2022 p. 99 is the EPS
+note). Two metrics: **strict** (only the statement page) and **lenient** (any page with the value).
+Two queries were replaced before freezing because the statement has no single value for them
+(bonds payable, borrowings: only non-current and current parts), so they ask for the non-current part.
+
+Honest note: a draft of the hybrid code existed before the test set was committed (written
+before we agreed on the order). It was not run on the held-out cases until the set was committed.
+
+### What the search does
+`Retriever.search()` (same interface) fuses three rankings of the chunks of the requested
+company and year with reciprocal rank fusion (RRF, k = 60):
+1. vector search (all-MiniLM, as before);
+2. BM25 on words (own code, about 30 lines, no new dependency; k1 = 1.5 for term-frequency
+   saturation, b = 0.75 for length normalization; both explained in the code and checked by a
+   hand-calculated test);
+3. a table-row signal: a row with figures whose label starts with the query's content words
+   ("Revenue from contracts with customers 22 235,467 223,747"). Stop words such as "total",
+   "statement", "december" are ignored; this list was chosen on dev.
+`score` is the RRF score divided by the best possible one (first in all three rankings), so it is
+0–1. A raw RRF value (at most 3/61 ≈ 0.05) could be read as "not relevant". `src/models.py` still
+calls `score` "retrieval similarity"; changing that comment needs the team's approval, so it is
+not changed yet. Today neither the agent nor the UI reads `score` (the agent sends id, company,
+year, page and text to the LLM); only `scripts/search.py` prints it.
+`Retriever(hybrid=False)` keeps plain vector search for comparison.
+
+### Results (k = 10)
+| | dense | dense + BM25 | dense + rows | **hybrid (all three)** |
+|---|---|---|---|---|
+| held-out strict hit@1 / hit@5 / MRR | 0.00 / 0.14 / 0.07 | 0.00 / 0.52 / 0.24 | 0.19 / 0.71 / 0.41 | **0.38 / 0.76 / 0.54** |
+| held-out lenient hit@1 / hit@5 / MRR | 0.29 / 0.71 / 0.47 | 0.52 / 0.95 / 0.72 | 0.57 / 0.90 / 0.70 | **0.81 / 0.95 / 0.87** |
+| dev strict hit@1 / hit@5 / MRR | 0.15 / 0.62 / 0.29 | 0.46 / 0.69 / 0.57 | 0.85 / 1.00 / 0.92 | 0.85 / 1.00 / 0.92 |
+
+Each part helps on held-out; the full fusion is best. Dev is higher than held-out, as expected for
+the set the row signal was designed on. Remaining misses (held-out strict > 10): Halyk "loans to
+customers" and "amounts due to customers": the figure is repeated in many notes (9 and 7 pages),
+so a note ranks above the balance sheet; lenient finds them at rank 1 and 4.
+
+Agent check (`agent/real-retriever` @ ce1f183 with this retriever, index with OCR fixes):
+Halyk 693,436 ✅ (1 search), KEGOC 769,921,817 ✅ citing p. 9 (4 searches: the first result is
+p. 58, the capital note with the same figure; the model keeps looking for a row labelled
+"Total equity", which the statement does not have), Kcell 219,002 → 235,467, +7.52 % ✅ (2
+searches, also computed revenue with government grants via `total`). Kaspi was not run: the
+OpenRouter free daily limit was reached (HTTP 429).
+
 ## 2026-11-18 · Agent on the real retriever (Berikzhan)
 
 ### The real Retriever is the default, opened once
