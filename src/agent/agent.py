@@ -17,37 +17,66 @@ from __future__ import annotations
 import json
 import logging
 import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from src.agent.llm import chat
-from src.agent.stub_retriever import StubRetriever
 from src.agent.tools import CALCULATORS, TOOL_SCHEMAS
 from src.models import Answer, Chunk, Citation
 
-MAX_STEPS = 6
+MAX_STEPS = 8  # up to 3 searches per figure (year Y, then Y+1) and a calculator
+INDEX_DIR = Path(__file__).resolve().parents[2] / "data" / "index"
+INDEX_MISSING = "Index not found. Run: python -m scripts.build_index"
 NOT_FOUND = "Not found in the reports"
 EMPTY_REPLY_NUDGE = "Your last reply was empty. Give your final answer now, following the rules."
 
 log = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = f"""You are KazFin Analyst, an assistant that answers questions about the annual reports of companies listed on the Kazakhstan Stock Exchange (KASE).
+SYSTEM_PROMPT = f"""You are KazFin Analyst, an assistant that answers questions about the audited IFRS financial statements of companies listed on the Kazakhstan Stock Exchange (KASE). The reports available are for Halyk Bank, KEGOC and Kcell.
 
 Rules:
-1. Always call search_reports to find figures. Use only figures that appear in the returned chunks. Never use your own knowledge for figures.
+1. Always call search_reports to find figures, and always pass company=. Use only figures that appear in the returned chunks. Never use your own knowledge for figures. If the company asked about is not Halyk Bank, KEGOC or Kcell, reply "{NOT_FOUND}." without guessing.
 2. Never do arithmetic yourself. For any growth, change, ratio, margin, ROE or debt-to-equity, call the calculator tool and use its result.
-3. Cite every figure you use by putting the chunk id in square brackets right after it, e.g. "Net income was 610,000 million KZT [halyk-2023-p87-0]". Use only ids returned by search_reports.
-4. If the needed figures are not in the returned chunks, after at most two searches reply exactly: "{NOT_FOUND}." followed by one short sentence on what is missing. Do not guess.
-5. Keep the answer short: the result first, then the figures it is based on, with units (e.g. million KZT, %).
+3. Units: a chunk may start with "Units: ..." (e.g. "In thousands of tenge", "In millions of tenge"), or the unit is written in the chunk text. KEGOC reports in thousands of tenge, Halyk Bank and Kcell in millions of tenge. Check the unit of every figure, always state the unit in the answer, and pass figures in the same unit to a calculator.
+4. Years and columns: the report for year X has a column for year X and a comparative column for year X-1. For a figure for year Y, search year=Y first. If it is not there, search year=Y+1 and take its comparative (Y) column. Always take the column of the year asked, never the neighbouring one, and say which report the figure came from.
+5. Prefer the main statements (statement of profit or loss, statement of financial position) over the notes when both have the figure. Some statement pages were read by OCR and can have wrong digits; if a row has no label or its numbers look inconsistent, use the same figure from another page (e.g. the statement of changes in equity) and say so.
+6. Cite every figure you use by putting the chunk id in square brackets right after it, e.g. "Net income was 610,000 million KZT [halyk-2023-p87-0]". Use only ids returned by search_reports.
+7. If the needed figures are not in the returned chunks after at most three searches, reply exactly: "{NOT_FOUND}." followed by one short sentence on what is missing. Do not guess.
+8. Keep the answer short: the result first, then the figures it is based on, with units (e.g. million KZT, %). Write numbers with commas as thousands separators (1,097,066,105).
 """
 
 _CITE_RE = re.compile(r"\[([A-Za-z0-9_.:-]+)\]")
 _NUMBER_RE = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
 _PAGE_RE = re.compile(r"\b(?:p\.|page|pages)\s*\d+", re.IGNORECASE)
+# 1.097.066.105: two or more dot groups of 3 digits. One dot (17.31, 569.653)
+# stays a decimal, because it cannot be told apart from a thousands separator.
+_DOT_THOUSANDS_RE = re.compile(r"(?<![\d.,])-?\d{1,3}(?:\.\d{3}){2,}(?![\d.])")
+# 693 435 or 1 097 066 105 (also with no-break or narrow no-break spaces)
+_SPACE_THOUSANDS_RE = re.compile(r"(?<![\d.,])-?\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?!\d)")
+
+
+@lru_cache(maxsize=1)
+def _default_retriever() -> Any:
+    """The real Retriever over data/index, opened once per process.
+
+    Imported here, not at the top, so this module still imports without chromadb
+    (the UI falls back to the fake agent only if this import fails).
+    """
+    if not INDEX_DIR.exists():
+        raise FileNotFoundError(INDEX_MISSING)
+    from src.ingest.retriever import Retriever
+
+    return Retriever(index_dir=INDEX_DIR)
 
 
 def answer(question: str, retriever: Any = None) -> Answer:
-    """Answer one question about the reports. `retriever` defaults to StubRetriever."""
-    retriever = retriever if retriever is not None else StubRetriever()
+    """Answer one question about the reports.
+
+    `retriever` defaults to the real Retriever over data/index; tests and eval
+    can pass a stub with the same search() interface.
+    """
+    retriever = retriever if retriever is not None else _default_retriever()
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
@@ -189,8 +218,14 @@ def _to_citation(chunk: Chunk) -> Citation:
 
 
 def _numbers_in_text(text: str) -> list[float]:
-    """Figures written in the answer, skipping years (2000-2100) and page numbers."""
+    """Figures written in the answer, skipping years (2000-2100) and page numbers.
+
+    Thousands separators may be commas (1,097,066,105), spaces (693 435) or
+    dots when there are at least two of them (1.097.066.105).
+    """
     text = _PAGE_RE.sub("", text)
+    text = _DOT_THOUSANDS_RE.sub(lambda m: m.group().replace(".", ","), text)
+    text = _SPACE_THOUSANDS_RE.sub(lambda m: re.sub(r"[ \u00a0\u202f]", ",", m.group()), text)
     numbers = []
     for token in _NUMBER_RE.findall(text):
         value = float(token.replace(",", ""))
