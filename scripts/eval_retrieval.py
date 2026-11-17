@@ -1,6 +1,7 @@
 """Measure how high the search ranks the pages that hold the answer.
 
-    python -m scripts.eval_retrieval            # current search
+    python -m scripts.eval_retrieval            # hybrid search (default)
+    python -m scripts.eval_retrieval --dense    # vector search only, for comparison
     python -m scripts.eval_retrieval -v         # also one line per query
 
 Cases are in data/retrieval_cases.json: a query, company, year, the value of
@@ -48,12 +49,13 @@ def summarize(ranks: list[int | None]) -> dict[str, float]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--cases", default=DEFAULT_CASES)
+    parser.add_argument("--dense", action="store_true", help="vector search only")
     parser.add_argument("-k", type=int, default=10, help="results per query (default 10)")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
     cases = json.loads(Path(args.cases).read_text(encoding="utf-8"))["cases"]
-    retriever = Retriever()
+    retriever = Retriever(hybrid=not args.dense)
     ranks: dict[tuple[str, str], list[int | None]] = {}
     show = lambda r: str(r) if r else f">{args.k}"  # noqa: E731
     for case in cases:
@@ -69,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.verbose:
         print()
-    print(f"k={args.k}")
+    print(f"search: {'dense' if args.dense else 'hybrid'}, k={args.k}")
     for (split, mode), values in ranks.items():
         s = summarize(values)
         print(f"{split:<8} {mode:<8} n={len(values):<3} hit@1 {s['hit@1']:.2f}   "
