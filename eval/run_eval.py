@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from eval.metrics import is_ready, score_item, summarize
+from eval.metrics import METRICS, is_ready, score_item, summarize
 from src.models import Answer
 
 EVAL_DIR = Path(__file__).resolve().parent
@@ -102,8 +102,8 @@ def evaluate(
         try:
             ans = answer_fn(q["question"])
         except Exception as exc:
-            if type(exc).__name__ == "LLMConfigError":
-                raise  # same for every question: stop the run
+            if type(exc).__name__ == "LLMConfigError" or isinstance(exc, FileNotFoundError):
+                raise  # missing key or index: same for every question, stop the run
             error = f"{type(exc).__name__}: {exc}"[:300]
             ans = Answer(text="", found=True)  # counts as wrong for every metric
         scores = score_item(ans, q)
@@ -111,7 +111,9 @@ def evaluate(
             {
                 "id": q.get("id"),
                 "question": q["question"],
+                "company": q.get("company"),
                 "type": q.get("type"),
+                "group": question_group(q),
                 "answer": asdict(ans),
                 "scores": scores,
                 "error": error,
@@ -125,8 +127,23 @@ def evaluate(
         "n_questions": len(selected),
         "skipped_todo": len(questions) - len(selected),
         "summary": summarize([r["scores"] for r in rows]),
+        "by_company": breakdown(rows, "company"),
+        "by_type": breakdown(rows, "group"),
         "items": rows,
     }
+
+
+def question_group(item: dict[str, Any]) -> str:
+    """Type used in the breakdown: ratio questions are counted apart from single figures."""
+    return "ratio" if "formula" in item else str(item.get("type"))
+
+
+def breakdown(rows: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
+    """summarize() per value of `key` (e.g. per company), in first-seen order."""
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for r in rows:
+        groups.setdefault(str(r.get(key)), []).append(r["scores"])
+    return {name: summarize(scores) for name, scores in groups.items()}
 
 
 def save_result(result: dict[str, Any], out_dir: Path = RESULTS_DIR) -> Path:
@@ -143,6 +160,7 @@ def format_summary(result: dict[str, Any]) -> str:
     labels = {
         "numeric": "Numeric accuracy",
         "citation": "Citation accuracy",
+        "text": "Text accuracy",
         "not_found": "Not-found accuracy",
     }
     lines = [
@@ -156,9 +174,24 @@ def format_summary(result: dict[str, Any]) -> str:
         m = result["summary"][key]
         acc = "-" if m["accuracy"] is None else f"{m['accuracy'] * 100:.1f}%"
         lines.append(f"{label:<20}{m['correct']:>8}{m['total']:>7}{acc:>10}")
+    for title, key in (("By company", "by_company"), ("By type", "by_type")):
+        if result.get(key):
+            lines += ["", format_breakdown(title, result[key])]
     errors = sum(1 for r in result["items"] if r["error"])
     if errors:
         lines.append(f"\nErrors: {errors} question(s) failed, see the JSON file.")
+    return "\n".join(lines)
+
+
+def format_breakdown(title: str, groups: dict[str, dict[str, Any]]) -> str:
+    """One row per group, "correct/total" per metric ("-" where it does not apply)."""
+    lines = [f"{title:<14}" + "".join(f"{m:>11}" for m in METRICS), "-" * (14 + 11 * len(METRICS))]
+    for name, summary in groups.items():
+        cells = []
+        for m in METRICS:
+            s = summary[m]
+            cells.append("-" if not s["total"] else f"{s['correct']}/{s['total']}")
+        lines.append(f"{name:<14}" + "".join(f"{c:>11}" for c in cells))
     return "\n".join(lines)
 
 
@@ -175,6 +208,10 @@ def main(argv: list[str] | None = None) -> int:
     questions = load_questions(args.questions)
     try:
         result = evaluate(mode, questions, get_answer_fn(mode))
+    except FileNotFoundError as exc:
+        print(f"Setup error: {exc}")
+        print("Build the index first: python -m scripts.build_index")
+        return 1
     except Exception as exc:
         if type(exc).__name__ != "LLMConfigError":
             raise
