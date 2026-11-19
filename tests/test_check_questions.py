@@ -134,3 +134,14 @@ def test_load_manifest_drops_skipped(tmp_path):
         {"file": "b.pdf", "company": "B", "year": 2023, "skip": "broken"},
     ]}), encoding="utf-8")
     assert list(cq.load_manifest(path)) == ["a.pdf"]
+
+
+def test_main_prints_consistency_warnings_but_passes(tmp_path, capsys):
+    questions = valid()
+    questions[0].update(label="Total equity 2023", gold_value=100)
+    questions.append({
+        **copy.deepcopy(SINGLE), "id": "q5", "label": "Total equity 2023", "gold_value": 200,
+    })
+    assert cq.main(write(tmp_path, questions)) == 0
+    out = capsys.readouterr().out
+    assert "warning" in out and "q1=100" in out and "q5=200" in out
