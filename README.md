@@ -160,6 +160,7 @@ hand-read base figures by the same calculator functions the agent uses. The desi
 difference between the two runs is what RAG + tools add.
 
 ```bash
+python -m eval.fill                   # type in gold values read from the PDFs, one field at a time
 python -m eval.check_questions        # validate the question file, show what is still TODO
 python -m eval.compute_gold           # compute gold values of ratio questions from their inputs
 python -m eval.run_eval               # the full assistant (needs .env and the index)
