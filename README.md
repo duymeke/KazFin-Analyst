@@ -26,30 +26,78 @@ The assistant:
 
 ## Setup
 
-_Coming soon. Setup instructions will work on a clean machine by the code freeze._
+Needs **Python 3.11+** and git. All commands are run from the repository root.
+
+### 1. Code and dependencies
+
+macOS / Linux:
 
 ```bash
-git clone <repo-url>
-cd kazfin-analyst
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+git clone https://github.com/duymeke/KazFin-Analyst.git
+cd KazFin-Analyst
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env             # then put your API key in .env
 ```
 
-OCR tools (the statement pages in the report PDFs are images):
+Windows (PowerShell):
+
+```powershell
+git clone https://github.com/duymeke/KazFin-Analyst.git
+cd KazFin-Analyst
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+If PowerShell refuses to run `Activate.ps1`, run
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or use `cmd` and `.venv\Scripts\activate.bat`.
+
+Check the install (no API key, no data and no network needed):
+
+```bash
+pytest
+```
+
+### 2. LLM settings
+
+Copy the template and fill it in (`cp` on macOS/Linux, `Copy-Item` in PowerShell):
+
+```bash
+cp .env.example .env
+```
+
+| Variable | What to put |
+|---|---|
+| `LLM_API_KEY` | your API key (e.g. from OpenRouter) |
+| `LLM_BASE_URL` | any OpenAI-compatible endpoint; default `https://openrouter.ai/api/v1` |
+| `LLM_MODEL` | a model id that **supports tool calling**; the model we used is in `DECISIONS.md` |
+
+`.env` is in `.gitignore`: never commit it and never paste the key into code, logs or chats.
+
+### 3. Report data and the search index
+
+The PDFs and the index are not in git. Put the 9 report PDFs into `data/raw/` with the exact
+names from `data/reports.json` (`halyk_2023.pdf`, …); where to get them is in `data/README.md`.
+
+The statement pages in the PDFs are images, so they need OCR before indexing. OCR needs
+`ocrmypdf` with Tesseract and Ghostscript:
 
 ```bash
 brew install ocrmypdf            # macOS (installs Tesseract and Ghostscript too)
 sudo apt install ocrmypdf        # Debian/Ubuntu
 ```
 
-Put the report PDFs into `data/raw/` (see `data/README.md`), then build the index:
+On Windows, follow the ocrmypdf installation guide for Windows, or simply copy a teammate's
+`data/ocr/` folder (the OCR copies) next to `data/raw/` and skip the OCR step.
 
 ```bash
-python -m scripts.ocr_reports    # OCR image-only pages -> data/ocr/
-python -m scripts.build_index    # parse PDFs and build the vector index in data/index/
+python -m scripts.ocr_reports    # OCR image-only pages -> data/ocr/  (about 1-2 minutes)
+python -m scripts.build_index    # parse the PDFs and build the index in data/index/
 ```
+
+The first `build_index` downloads ChromaDB's embedding model (all-MiniLM-L6-v2, about 80 MB)
+once. Rebuild the index whenever a PDF, `data/reports.json` or `data/ocr_fixes.json` changes.
 
 ## Data
 
