@@ -99,6 +99,47 @@ python -m scripts.build_index    # parse the PDFs and build the index in data/in
 The first `build_index` downloads ChromaDB's embedding model (all-MiniLM-L6-v2, about 80 MB)
 once. Rebuild the index whenever a PDF, `data/reports.json` or `data/ocr_fixes.json` changes.
 
+## Usage
+
+### Web interface
+
+```bash
+streamlit run src/app/streamlit_app.py
+```
+
+The browser opens at http://localhost:8501. Type a question, optionally pick a company, and the
+answer shows its sources as "Company, year, page N" with the quoted text under each one. If the
+data is not in the reports, the app says so instead of guessing. Stop the server with `Ctrl+C`.
+
+**Demo mode** (no API key and no index needed, answers are clearly marked as FAKE):
+
+```bash
+USE_FAKE_AGENT=1 streamlit run src/app/streamlit_app.py                 # macOS / Linux
+```
+
+```powershell
+$env:USE_FAKE_AGENT="1"; streamlit run src/app/streamlit_app.py          # Windows PowerShell
+```
+
+In PowerShell the variable stays set in that terminal; remove it with
+`Remove-Item Env:USE_FAKE_AGENT` before running the real agent.
+
+### Command line
+
+```bash
+python -m scripts.ask "How did Halyk Bank's net income change from 2022 to 2023?"
+python -m scripts.ask -v "..."                                  # also print every tool call
+python -m scripts.search "net income" --company Halyk --year 2023 -k 5   # retrieval only, no LLM
+```
+
+### Common errors
+
+| Message | Fix |
+|---|---|
+| `LLM_API_KEY is not set` / "The LLM is not configured" | create `.env` (step 2 of Setup) |
+| `Index not found` / "The search index is not built yet" | build the index (step 3 of Setup) |
+| empty answers or HTTP 429 from the provider | the model is overloaded or not suited; change `LLM_MODEL` (see `DECISIONS.md`) |
+
 ## Data
 
 Public annual reports downloaded manually from [kase.kz](https://kase.kz) and the companies' investor relations pages. The PDFs are not committed to this repository; see `data/README.md` for the list of files and the OCR step.
