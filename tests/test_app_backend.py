@@ -72,3 +72,38 @@ def test_with_company_adds_hint():
 def test_format_citation():
     c = Citation(company="KEGOC", year=2024, source_file="kegoc_2024.pdf", page=12)
     assert backend.format_citation(c) == "KEGOC, 2024, page 12"
+
+
+def test_ask_missing_index_is_friendly():
+    def fail(_q):
+        raise FileNotFoundError("Index not found. Run: python -m scripts.build_index")
+
+    result = backend.ask(fail, "q")
+    assert result.answer is None
+    assert "python -m scripts.build_index" in result.error
+
+
+def test_companies_from_real_manifest():
+    assert backend.COMPANIES[0] == "All"
+    assert {"Halyk Bank", "KEGOC", "Kcell"} <= set(backend.COMPANIES)
+
+
+def test_load_companies_order_unique_and_skip(tmp_path):
+    import json
+
+    path = tmp_path / "reports.json"
+    path.write_text(json.dumps({"reports": [
+        {"file": "b_2023.pdf", "company": "B", "year": 2023},
+        {"file": "a_2023.pdf", "company": "A", "year": 2023},
+        {"file": "b_2024.pdf", "company": "B", "year": 2024},
+        {"file": "c_2024.pdf", "company": "C", "year": 2024, "skip": "broken"},
+    ]}), encoding="utf-8")
+    assert backend.load_companies(path) == ["All", "B", "A"]
+
+
+def test_load_companies_falls_back(tmp_path):
+    bad = tmp_path / "reports.json"
+    bad.write_text("{not json", encoding="utf-8")
+    expected = ["All", *backend.DEFAULT_COMPANIES]
+    assert backend.load_companies(bad) == expected
+    assert backend.load_companies(tmp_path / "missing.json") == expected

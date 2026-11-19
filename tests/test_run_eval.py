@@ -116,3 +116,28 @@ def test_baseline_not_found(monkeypatch, content):
 
 def test_numbers_in_text():
     assert run_eval.numbers_in_text("Up 17.31% from 520,000 in 2022") == [17.31, 520000.0]
+
+
+def test_breakdown_by_company_and_type():
+    other = {**READY, "id": "r2", "company": "Y"}
+    ratio = {**READY, "id": "r3", "formula": "roe", "inputs": []}
+    result = run_eval.evaluate("agent", [READY, other, ratio, NOT_FOUND_ITEM], good_answer)
+    assert list(result["by_company"]) == ["X", "Y"]
+    assert result["by_company"]["X"]["numeric"]["total"] == 2
+    assert result["by_company"]["Y"]["citation"]["correct"] == 0  # the citation is for company X
+    assert set(result["by_type"]) == {"numeric", "ratio", "not_found"}
+    text = run_eval.format_summary(result)
+    assert "By company" in text and "By type" in text and "Text accuracy" in text
+
+
+def test_missing_index_stops_run(tmp_path, monkeypatch, capsys):
+    def no_index(_q):
+        raise FileNotFoundError("Index not found. Run: python -m scripts.build_index")
+
+    monkeypatch.setattr(run_eval, "get_answer_fn", lambda mode: no_index)
+    qpath = write_questions(tmp_path, [READY, READY])
+    code = run_eval.main(["--questions", str(qpath), "--out", str(tmp_path / "res")])
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "Setup error" in out and "scripts.build_index" in out
+    assert not (tmp_path / "res").exists()

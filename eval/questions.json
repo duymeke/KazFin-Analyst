@@ -5,58 +5,664 @@
     "company": "Halyk Bank",
     "year": 2023,
     "type": "numeric",
+    "unit": "million KZT",
     "gold_answer": "TODO",
     "gold_value": "TODO",
-    "unit": "million KZT",
     "source_file": "halyk_2023.pdf",
-    "source_page": "TODO"
+    "source_page": "TODO",
+    "note": "Net income 2023: take the figure from the main statement of halyk_2023.pdf."
   },
   {
     "id": "q002",
+    "question": "What were Halyk Bank's total assets at the end of 2024?",
+    "company": "Halyk Bank",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "halyk_2024.pdf",
+    "source_page": "TODO",
+    "note": "Total assets 2024: take the figure from the main statement of halyk_2024.pdf."
+  },
+  {
+    "id": "q003",
+    "question": "What was Halyk Bank's total equity at the end of 2022?",
+    "company": "Halyk Bank",
+    "year": 2022,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "halyk_2022.pdf",
+    "source_page": "TODO",
+    "note": "Total equity 2022: take the figure from the main statement of halyk_2022.pdf."
+  },
+  {
+    "id": "q004",
+    "question": "How much cash and cash equivalents did Halyk Bank have at the end of 2024?",
+    "company": "Halyk Bank",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "halyk_2024.pdf",
+    "source_page": "TODO",
+    "note": "Cash and cash equivalents 2024: take the figure from the main statement of halyk_2024.pdf."
+  },
+  {
+    "id": "q005",
     "question": "By how many percent did Halyk Bank's net income change from 2022 to 2023?",
     "company": "Halyk Bank",
     "year": 2023,
     "type": "numeric",
+    "unit": "%",
+    "formula": "percent_change",
+    "inputs": [
+      {
+        "name": "old",
+        "label": "Net income 2022",
+        "value": "TODO",
+        "source_file": "halyk_2022.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "new",
+        "label": "Net income 2023",
+        "value": "TODO",
+        "source_file": "halyk_2023.pdf",
+        "source_page": "TODO"
+      }
+    ],
     "gold_answer": "TODO",
     "gold_value": "TODO",
-    "unit": "%",
-    "source_file": "halyk_2023.pdf",
-    "source_page": "TODO"
+    "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
   },
   {
-    "id": "q003",
-    "question": "What was KEGOC's revenue in 2024?",
+    "id": "q006",
+    "question": "What was Halyk Bank's return on equity (ROE) in 2024?",
+    "company": "Halyk Bank",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "roe",
+    "inputs": [
+      {
+        "name": "net_income",
+        "label": "Net income 2024",
+        "value": "TODO",
+        "source_file": "halyk_2024.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "equity",
+        "label": "Total equity at end of 2024",
+        "value": "TODO",
+        "source_file": "halyk_2024.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "ROE = net income / total equity at the END of the year (tools.roe), not average equity."
+  },
+  {
+    "id": "q007",
+    "question": "What was Halyk Bank's debt-to-equity ratio at the end of 2023?",
+    "company": "Halyk Bank",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "x",
+    "formula": "debt_to_equity",
+    "inputs": [
+      {
+        "name": "total_liabilities",
+        "label": "Total liabilities 2023",
+        "value": "TODO",
+        "source_file": "halyk_2023.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "total_equity",
+        "label": "Total equity 2023",
+        "value": "TODO",
+        "source_file": "halyk_2023.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "Fill value and source_page of every input; gold_value is computed by eval.compute_gold."
+  },
+  {
+    "id": "q008",
+    "question": "By how many percent did Halyk Bank's total assets change from 2023 to 2024?",
+    "company": "Halyk Bank",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "percent_change",
+    "inputs": [
+      {
+        "name": "old",
+        "label": "Total assets 2023",
+        "value": "TODO",
+        "source_file": "halyk_2023.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "new",
+        "label": "Total assets 2024",
+        "value": "TODO",
+        "source_file": "halyk_2024.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
+  },
+  {
+    "id": "q009",
+    "question": "Which audit firm audited Halyk Bank's financial statements for 2024?",
+    "company": "Halyk Bank",
+    "year": 2024,
+    "type": "text",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_keywords": [
+      "TODO"
+    ],
+    "gold_value": null,
+    "source_file": "halyk_2024.pdf",
+    "source_page": "TODO",
+    "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
+  },
+  {
+    "id": "q010",
+    "question": "In which currency does Halyk Bank present its 2023 financial statements?",
+    "company": "Halyk Bank",
+    "year": 2023,
+    "type": "text",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_keywords": [
+      "TODO"
+    ],
+    "gold_value": null,
+    "source_file": "halyk_2023.pdf",
+    "source_page": "TODO",
+    "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
+  },
+  {
+    "id": "q011",
+    "question": "What was Halyk Bank's net income in 2019?",
+    "company": "Halyk Bank",
+    "year": 2019,
+    "type": "not_found",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "source_file": null,
+    "source_page": null,
+    "note": "Year not covered: the earliest report is 2022 (with 2021 comparatives). After checking by hand, set gold_answer to \"Not found in the reports\"."
+  },
+  {
+    "id": "q012",
+    "question": "What dividend per share will Halyk Bank pay for 2025?",
+    "company": "Halyk Bank",
+    "year": 2025,
+    "type": "not_found",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "source_file": null,
+    "source_page": null,
+    "note": "Future figure, cannot be in the 2022-2024 statements. After checking by hand, set gold_answer to \"Not found in the reports\"."
+  },
+  {
+    "id": "q013",
+    "question": "What was KEGOC's revenue in 2023?",
+    "company": "KEGOC",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "thousand KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kegoc_2023.pdf",
+    "source_page": "TODO",
+    "note": "Revenue 2023: take the figure from the main statement of kegoc_2023.pdf."
+  },
+  {
+    "id": "q014",
+    "question": "What was KEGOC's net income in 2024?",
     "company": "KEGOC",
     "year": 2024,
     "type": "numeric",
+    "unit": "thousand KZT",
     "gold_answer": "TODO",
     "gold_value": "TODO",
-    "unit": "million KZT",
     "source_file": "kegoc_2024.pdf",
-    "source_page": "TODO"
+    "source_page": "TODO",
+    "note": "Net income 2024: take the figure from the main statement of kegoc_2024.pdf."
   },
   {
-    "id": "q004",
-    "question": "Who was the Chief Executive Officer of Kcell in 2023?",
-    "company": "Kcell",
+    "id": "q015",
+    "question": "What were KEGOC's total liabilities at the end of 2022?",
+    "company": "KEGOC",
+    "year": 2022,
+    "type": "numeric",
+    "unit": "thousand KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kegoc_2022.pdf",
+    "source_page": "TODO",
+    "note": "Total liabilities 2022: take the figure from the main statement of kegoc_2022.pdf."
+  },
+  {
+    "id": "q016",
+    "question": "How much cash and cash equivalents did KEGOC have at the end of 2023?",
+    "company": "KEGOC",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "thousand KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kegoc_2023.pdf",
+    "source_page": "TODO",
+    "note": "Cash and cash equivalents 2023: take the figure from the main statement of kegoc_2023.pdf."
+  },
+  {
+    "id": "q017",
+    "question": "What was KEGOC's net profit margin in 2023?",
+    "company": "KEGOC",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "net_margin",
+    "inputs": [
+      {
+        "name": "net_income",
+        "label": "Net income 2023",
+        "value": "TODO",
+        "source_file": "kegoc_2023.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "revenue",
+        "label": "Revenue 2023",
+        "value": "TODO",
+        "source_file": "kegoc_2023.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "Fill value and source_page of every input; gold_value is computed by eval.compute_gold."
+  },
+  {
+    "id": "q018",
+    "question": "What was KEGOC's return on equity (ROE) in 2023?",
+    "company": "KEGOC",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "roe",
+    "inputs": [
+      {
+        "name": "net_income",
+        "label": "Net income 2023",
+        "value": "TODO",
+        "source_file": "kegoc_2023.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "equity",
+        "label": "Total equity at end of 2023",
+        "value": "TODO",
+        "source_file": "kegoc_2023.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "ROE = net income / total equity at the END of the year (tools.roe), not average equity."
+  },
+  {
+    "id": "q019",
+    "question": "What was KEGOC's debt-to-equity ratio at the end of 2024?",
+    "company": "KEGOC",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "x",
+    "formula": "debt_to_equity",
+    "inputs": [
+      {
+        "name": "total_liabilities",
+        "label": "Total liabilities 2024",
+        "value": "TODO",
+        "source_file": "kegoc_2024.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "total_equity",
+        "label": "Total equity 2024",
+        "value": "TODO",
+        "source_file": "kegoc_2024.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "kegoc_2024.pdf page 9 had OCR errors (DECISIONS.md): check the figures against the page image."
+  },
+  {
+    "id": "q020",
+    "question": "By how many percent did KEGOC's revenue change from 2022 to 2024?",
+    "company": "KEGOC",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "percent_change",
+    "inputs": [
+      {
+        "name": "old",
+        "label": "Revenue 2022",
+        "value": "TODO",
+        "source_file": "kegoc_2022.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "new",
+        "label": "Revenue 2024",
+        "value": "TODO",
+        "source_file": "kegoc_2024.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
+  },
+  {
+    "id": "q021",
+    "question": "Which audit firm audited KEGOC's financial statements for 2023?",
+    "company": "KEGOC",
     "year": 2023,
     "type": "text",
-    "gold_answer": "TODO",
-    "gold_value": null,
     "unit": "",
-    "source_file": "kcell_2023.pdf",
-    "source_page": "TODO"
+    "gold_answer": "TODO",
+    "gold_keywords": [
+      "TODO"
+    ],
+    "gold_value": null,
+    "source_file": "kegoc_2023.pdf",
+    "source_page": "TODO",
+    "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
-    "id": "q005",
-    "question": "What was KEGOC's net income in 2015?",
+    "id": "q022",
+    "question": "What is KEGOC's principal activity according to its 2024 financial statements?",
     "company": "KEGOC",
-    "year": 2015,
+    "year": 2024,
+    "type": "text",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_keywords": [
+      "TODO"
+    ],
+    "gold_value": null,
+    "source_file": "kegoc_2024.pdf",
+    "source_page": "TODO",
+    "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
+  },
+  {
+    "id": "q023",
+    "question": "What was KEGOC's revenue in 2025?",
+    "company": "KEGOC",
+    "year": 2025,
     "type": "not_found",
+    "unit": "",
     "gold_answer": "TODO",
     "gold_value": null,
-    "unit": "",
     "source_file": null,
-    "source_page": null
+    "source_page": null,
+    "note": "Future year, not in the 2022-2024 statements. After checking by hand, set gold_answer to \"Not found in the reports\"."
+  },
+  {
+    "id": "q024",
+    "question": "How many employees did KEGOC have at the end of 2024?",
+    "company": "KEGOC",
+    "year": 2024,
+    "type": "not_found",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "source_file": null,
+    "source_page": null,
+    "note": "Check by hand: if the notes give the number of employees, change the type to numeric. After checking by hand, set gold_answer to \"Not found in the reports\"."
+  },
+  {
+    "id": "q025",
+    "question": "What was Kcell's revenue in 2024?",
+    "company": "Kcell",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kcell_2024.pdf",
+    "source_page": "TODO",
+    "note": "Revenue 2024: take the figure from the main statement of kcell_2024.pdf."
+  },
+  {
+    "id": "q026",
+    "question": "What was Kcell's net income in 2022?",
+    "company": "Kcell",
+    "year": 2022,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kcell_2022.pdf",
+    "source_page": "TODO",
+    "note": "Net income 2022: take the figure from the main statement of kcell_2022.pdf."
+  },
+  {
+    "id": "q027",
+    "question": "What were Kcell's total assets at the end of 2023?",
+    "company": "Kcell",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kcell_2023.pdf",
+    "source_page": "TODO",
+    "note": "Total assets 2023: take the figure from the main statement of kcell_2023.pdf."
+  },
+  {
+    "id": "q028",
+    "question": "How much cash and cash equivalents did Kcell have at the end of 2022?",
+    "company": "Kcell",
+    "year": 2022,
+    "type": "numeric",
+    "unit": "million KZT",
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "source_file": "kcell_2022.pdf",
+    "source_page": "TODO",
+    "note": "Cash and cash equivalents 2022: take the figure from the main statement of kcell_2022.pdf."
+  },
+  {
+    "id": "q029",
+    "question": "What was Kcell's net profit margin in 2024?",
+    "company": "Kcell",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "net_margin",
+    "inputs": [
+      {
+        "name": "net_income",
+        "label": "Net income 2024",
+        "value": "TODO",
+        "source_file": "kcell_2024.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "revenue",
+        "label": "Revenue 2024",
+        "value": "TODO",
+        "source_file": "kcell_2024.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "Fill value and source_page of every input; gold_value is computed by eval.compute_gold."
+  },
+  {
+    "id": "q030",
+    "question": "What was Kcell's return on equity (ROE) in 2022?",
+    "company": "Kcell",
+    "year": 2022,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "roe",
+    "inputs": [
+      {
+        "name": "net_income",
+        "label": "Net income 2022",
+        "value": "TODO",
+        "source_file": "kcell_2022.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "equity",
+        "label": "Total equity at end of 2022",
+        "value": "TODO",
+        "source_file": "kcell_2022.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "ROE = net income / total equity at the END of the year (tools.roe), not average equity."
+  },
+  {
+    "id": "q031",
+    "question": "What was Kcell's debt-to-equity ratio at the end of 2023?",
+    "company": "Kcell",
+    "year": 2023,
+    "type": "numeric",
+    "unit": "x",
+    "formula": "debt_to_equity",
+    "inputs": [
+      {
+        "name": "total_liabilities",
+        "label": "Total liabilities 2023",
+        "value": "TODO",
+        "source_file": "kcell_2023.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "total_equity",
+        "label": "Total equity 2023",
+        "value": "TODO",
+        "source_file": "kcell_2023.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "kcell_2023.pdf is a scan: check the figures against the page image."
+  },
+  {
+    "id": "q032",
+    "question": "By how many percent did Kcell's revenue change from 2023 to 2024?",
+    "company": "Kcell",
+    "year": 2024,
+    "type": "numeric",
+    "unit": "%",
+    "formula": "percent_change",
+    "inputs": [
+      {
+        "name": "old",
+        "label": "Revenue 2023",
+        "value": "TODO",
+        "source_file": "kcell_2023.pdf",
+        "source_page": "TODO"
+      },
+      {
+        "name": "new",
+        "label": "Revenue 2024",
+        "value": "TODO",
+        "source_file": "kcell_2024.pdf",
+        "source_page": "TODO"
+      }
+    ],
+    "gold_answer": "TODO",
+    "gold_value": "TODO",
+    "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
+  },
+  {
+    "id": "q033",
+    "question": "Which audit firm audited Kcell's financial statements for 2022?",
+    "company": "Kcell",
+    "year": 2022,
+    "type": "text",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_keywords": [
+      "TODO"
+    ],
+    "gold_value": null,
+    "source_file": "kcell_2022.pdf",
+    "source_page": "TODO",
+    "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
+  },
+  {
+    "id": "q034",
+    "question": "In which currency does Kcell present its 2024 financial statements?",
+    "company": "Kcell",
+    "year": 2024,
+    "type": "text",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_keywords": [
+      "TODO"
+    ],
+    "gold_value": null,
+    "source_file": "kcell_2024.pdf",
+    "source_page": "TODO",
+    "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
+  },
+  {
+    "id": "q035",
+    "question": "How many mobile subscribers did Kcell have at the end of 2024?",
+    "company": "Kcell",
+    "year": 2024,
+    "type": "not_found",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "source_file": null,
+    "source_page": null,
+    "note": "Check by hand: if the notes give the subscriber count, replace this question. After checking by hand, set gold_answer to \"Not found in the reports\"."
+  },
+  {
+    "id": "q036",
+    "question": "What was Kaspi.kz's net income in 2023?",
+    "company": "Kaspi.kz",
+    "year": 2023,
+    "type": "not_found",
+    "unit": "",
+    "gold_answer": "TODO",
+    "gold_value": null,
+    "source_file": null,
+    "source_page": null,
+    "note": "Company not in data/reports.json. After checking by hand, set gold_answer to \"Not found in the reports\"."
   }
 ]
