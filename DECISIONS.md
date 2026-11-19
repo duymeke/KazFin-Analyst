@@ -334,3 +334,57 @@ p. 58, the capital note with the same figure; the model keeps looking for a row 
 "Total equity", which the statement does not have), Kcell 219,002 → 235,467, +7.52 % ✅ (2
 searches, also computed revenue with government grants via `total`). Kaspi was not run: the
 OpenRouter free daily limit was reached (HTTP 429).
+
+## 2026-11-19 · Evaluation question set (Zangar)
+
+### 36 questions, gold values filled in by hand
+`eval/questions.json` has 36 questions, 12 per company (Halyk Bank, KEGOC, Kcell; one
+`not_found` is about Kaspi.kz instead of Kcell). The agent wrote only the questions and the
+structure; every `gold_value`, input value, page and keyword is `"TODO"` until Zangar reads it in
+the PDF. Neither the agent nor a script looks up figures.
+
+| Type | Count | Why |
+|---|---|---|
+| numeric, single figure | 12 | net income, revenue, total assets / equity / liabilities, cash: tests retrieval and reading the right column |
+| numeric, ratio | 12 | percent change, net margin, ROE, debt-to-equity: tests that the agent calls calculators instead of doing arithmetic |
+| text | 6 | auditor, presentation currency, principal activity: answers that are not numbers |
+| not_found | 6 | year not covered (2019), future figures, a company we do not have, data that statements usually do not contain: tests the refusal |
+
+- Halyk Bank is a bank and has no "revenue" line, so it gets no net-margin question.
+- No ROA: `tools.ratio()` rounds to 2 decimals, so a ROA of ~0.03 would barely be checked.
+- Two `not_found` questions (KEGOC employees, Kcell subscribers) must be checked by hand: if the
+  notes do contain the figure, the question is changed, not the gold answer.
+
+### Units
+Gold values are in the unit of the report, the same unit the agent copies from the chunk:
+KEGOC `thousand KZT`, Halyk Bank and Kcell `million KZT`. Ratios: `%` for percent change, net
+margin and ROE (12.5 means 12.5 %), `x` for debt-to-equity. `check_questions` enforces this.
+
+### Ratio gold values are computed, not typed
+A ratio question has `formula` and `inputs` (the base figures, each with its own value,
+source_file and page). `python -m eval.compute_gold` computes `gold_value` with the same
+function from `src/agent/tools.py` that the agent calls (imported, not copied), so nobody does
+arithmetic by hand. Consequence: a wrong formula in `tools.py` would not be caught by the eval;
+the formulas themselves are covered by `tests/test_tools.py`. ROE is net income / equity at the
+**end** of the year, as in `tools.roe`, not average equity.
+
+### Comparative-year rule and citation accuracy
+The report for year X also holds the X-1 figures in its comparative column. So `source_file` is
+the report where the figure was actually read, and `check_questions` allows the question year or
+the next year. **Citation accuracy now compares `source_file` + page instead of year + page.**
+With the old rule, a correct citation of `halyk_2023.pdf` for a 2022 figure was counted as
+wrong, because the citation year is the report year (2023). For ratio questions a citation of
+the page of any input counts.
+
+### Text accuracy
+Text questions were only scored on citations, the answer itself was never compared. Now they
+have `gold_keywords`; `text_correct` is true when every keyword is in the answer
+(case-insensitive) and the answer is not a refusal.
+
+### Checks before a run
+`python -m eval.check_questions` validates the file (fields, ids, files in `data/reports.json`,
+units, formula inputs, number types) and prints counts per company / type and how many are still
+TODO; exit code 1 if invalid. `run_eval` now also prints metrics per company and per type, and
+stops with one setup message when `data/index` is missing instead of failing every question. The
+UI shows the same hint (`python -m scripts.build_index`) and reads the company list from
+`data/reports.json`, so new companies appear without code changes.
