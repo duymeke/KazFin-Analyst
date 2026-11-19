@@ -388,3 +388,31 @@ TODO; exit code 1 if invalid. `run_eval` now also prints metrics per company and
 stops with one setup message when `data/index` is missing instead of failing every question. The
 UI shows the same hint (`python -m scripts.build_index`) and reads the company list from
 `data/reports.json`, so new companies appear without code changes.
+
+## 2026-11-20 · Helper for filling gold values (Zangar)
+
+### The agent was asked to fill the gold values and refused (our request, kept as is)
+I asked the coding agent to read the 9 PDFs and fill `eval/questions.json` itself. It refused:
+the team plan and the eval prompt say the gold answers are read by hand, and if the same kind of
+model reads the gold figures, its misreads (OCR digits, wrong column, wrong unit) end up in the
+gold answers and the evaluation no longer catches them. We kept the rule and built a helper that
+removes the routine instead.
+
+### `eval.fill`: the helper asks, it never suggests a figure
+`python -m eval.fill [--company ...] [--id ...]` walks through every TODO field: question, file,
+unit and hint, then asks for the value and page. Numbers can be typed as in the PDF
+(`693,436`, `1 097 066 105`, `(1,234)` for a negative); the helper shows how it saved them.
+Enter skips a field, `q` quits, every answer is saved at once. Ratio questions ask only for
+their inputs; the gold ratio is computed by `compute_gold` (the agent's calculators). For a
+`not_found` question you confirm that the data is not in the reports; if it is there, the
+question is flagged for replacement instead of getting a made-up answer.
+
+### Consistency warnings
+Single-figure questions got a `label` (e.g. "Net income 2023") so a figure can be matched with
+the same figure used as a ratio input. `check_questions` and `fill` now warn when:
+- the same company + label has different values in different questions;
+- total assets differ from total liabilities + total equity by more than 0.5% (same company and
+  year; possible for Halyk 2023 and Kcell 2023 in the current set);
+- a page number is larger than the PDF (only when the PDF is in `data/raw/`).
+These are warnings, not errors: a real restatement between two reports is possible, so the
+person who read the page decides.
