@@ -7,10 +7,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Net income 2023",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Halyk Bank's net income in 2023 was KZT 693,436 million.",
+    "gold_value": 693436,
     "source_file": "halyk_2023.pdf",
-    "source_page": "TODO",
+    "source_page": 12,
     "note": "Net income 2023: take the figure from the main statement of halyk_2023.pdf."
   },
   {
@@ -21,11 +21,11 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Total assets 2024",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Halyk Bank's total assets at 31 December 2024 were KZT 18,548,414 million.",
+    "gold_value": 18548414,
     "source_file": "halyk_2024.pdf",
-    "source_page": "TODO",
-    "note": "Total assets 2024: take the figure from the main statement of halyk_2024.pdf."
+    "source_page": 9,
+    "note": "Total assets 2024: take the figure from the main statement of halyk_2024.pdf. Corrected: 17,003,325 was the 'Kazakhstan' geographic segment from the notes (p.152), not consolidated total assets."
   },
   {
     "id": "q003",
@@ -35,10 +35,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Total equity 2022",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Halyk Bank's total equity at 31 December 2022 was KZT 1,911,234 million.",
+    "gold_value": 1911234,
     "source_file": "halyk_2022.pdf",
-    "source_page": "TODO",
+    "source_page": 10,
     "note": "Total equity 2022: take the figure from the main statement of halyk_2022.pdf."
   },
   {
@@ -49,10 +49,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Cash and cash equivalents 2024",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Halyk Bank's cash and cash equivalents at 31 December 2024 were KZT 1,473,802 million.",
+    "gold_value": 1473802,
     "source_file": "halyk_2024.pdf",
-    "source_page": "TODO",
+    "source_page": 9,
     "note": "Cash and cash equivalents 2024: take the figure from the main statement of halyk_2024.pdf."
   },
   {
@@ -67,21 +67,21 @@
       {
         "name": "old",
         "label": "Net income 2022",
-        "value": "TODO",
+        "value": 553752,
         "source_file": "halyk_2022.pdf",
-        "source_page": "TODO"
+        "source_page": 11
       },
       {
         "name": "new",
         "label": "Net income 2023",
-        "value": "TODO",
+        "value": 693436,
         "source_file": "halyk_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 12
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
-    "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
+    "gold_answer": "25.23 %",
+    "gold_value": 25.23,
+    "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it. 2022 figure as originally reported in halyk_2022.pdf; the 2023 report shows 2022 restated (IFRS 17) as 569,478, which would give +21.77%."
   },
   {
     "id": "q006",
@@ -95,20 +95,20 @@
       {
         "name": "net_income",
         "label": "Net income 2024",
-        "value": "TODO",
+        "value": 920991,
         "source_file": "halyk_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       },
       {
         "name": "equity",
         "label": "Total equity at end of 2024",
-        "value": "TODO",
+        "value": 3068049,
         "source_file": "halyk_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "30.02 %",
+    "gold_value": 30.02,
     "note": "ROE = net income / total equity at the END of the year (tools.roe), not average equity."
   },
   {
@@ -123,20 +123,20 @@
       {
         "name": "total_liabilities",
         "label": "Total liabilities 2023",
-        "value": "TODO",
+        "value": 13017414,
         "source_file": "halyk_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 11
       },
       {
         "name": "total_equity",
         "label": "Total equity 2023",
-        "value": "TODO",
+        "value": 2476954,
         "source_file": "halyk_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 11
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "5.26 x",
+    "gold_value": 5.26,
     "note": "Fill value and source_page of every input; gold_value is computed by eval.compute_gold."
   },
   {
@@ -151,20 +151,20 @@
       {
         "name": "old",
         "label": "Total assets 2023",
-        "value": "TODO",
+        "value": 15494368,
         "source_file": "halyk_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 11
       },
       {
         "name": "new",
         "label": "Total assets 2024",
-        "value": "TODO",
+        "value": 18548414,
         "source_file": "halyk_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "19.71 %",
+    "gold_value": 19.71,
     "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
   },
   {
@@ -174,13 +174,13 @@
     "year": 2024,
     "type": "text",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Deloitte LLP audited Halyk Bank's 2024 financial statements.",
     "gold_keywords": [
-      "TODO"
+      "Deloitte"
     ],
     "gold_value": null,
     "source_file": "halyk_2024.pdf",
-    "source_page": "TODO",
+    "source_page": 4,
     "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
@@ -190,13 +190,14 @@
     "year": 2023,
     "type": "text",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Kazakhstani Tenge (KZT), presented in millions.",
     "gold_keywords": [
-      "TODO"
+      "KZT",
+      "Tenge"
     ],
     "gold_value": null,
     "source_file": "halyk_2023.pdf",
-    "source_page": "TODO",
+    "source_page": 21,
     "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
@@ -206,7 +207,7 @@
     "year": 2019,
     "type": "not_found",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Not found in the reports",
     "gold_value": null,
     "source_file": null,
     "source_page": null,
@@ -219,7 +220,7 @@
     "year": 2025,
     "type": "not_found",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Not found in the reports",
     "gold_value": null,
     "source_file": null,
     "source_page": null,
@@ -233,10 +234,10 @@
     "type": "numeric",
     "unit": "thousand KZT",
     "label": "Revenue 2023",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "KEGOC's revenue in 2023 was KZT 252,136,383 thousand.",
+    "gold_value": 252136383,
     "source_file": "kegoc_2023.pdf",
-    "source_page": "TODO",
+    "source_page": 10,
     "note": "Revenue 2023: take the figure from the main statement of kegoc_2023.pdf."
   },
   {
@@ -247,10 +248,10 @@
     "type": "numeric",
     "unit": "thousand KZT",
     "label": "Net income 2024",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "KEGOC's net income (profit for the year) in 2024 was KZT 59,497,047 thousand.",
+    "gold_value": 59497047,
     "source_file": "kegoc_2024.pdf",
-    "source_page": "TODO",
+    "source_page": 10,
     "note": "Net income 2024: take the figure from the main statement of kegoc_2024.pdf."
   },
   {
@@ -261,10 +262,10 @@
     "type": "numeric",
     "unit": "thousand KZT",
     "label": "Total liabilities 2022",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "KEGOC's total liabilities at 31 December 2022 were KZT 333,047,025 thousand.",
+    "gold_value": 333047025,
     "source_file": "kegoc_2022.pdf",
-    "source_page": "TODO",
+    "source_page": 9,
     "note": "Total liabilities 2022: take the figure from the main statement of kegoc_2022.pdf."
   },
   {
@@ -275,10 +276,10 @@
     "type": "numeric",
     "unit": "thousand KZT",
     "label": "Cash and cash equivalents 2023",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "KEGOC's cash and cash equivalents at 31 December 2023 were KZT 45,528,523 thousand.",
+    "gold_value": 45528523,
     "source_file": "kegoc_2023.pdf",
-    "source_page": "TODO",
+    "source_page": 8,
     "note": "Cash and cash equivalents 2023: take the figure from the main statement of kegoc_2023.pdf."
   },
   {
@@ -293,20 +294,20 @@
       {
         "name": "net_income",
         "label": "Net income 2023",
-        "value": "TODO",
+        "value": 43396389,
         "source_file": "kegoc_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       },
       {
         "name": "revenue",
         "label": "Revenue 2023",
-        "value": "TODO",
+        "value": 252136383,
         "source_file": "kegoc_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "17.21 %",
+    "gold_value": 17.21,
     "note": "Fill value and source_page of every input; gold_value is computed by eval.compute_gold."
   },
   {
@@ -321,20 +322,20 @@
       {
         "name": "net_income",
         "label": "Net income 2023",
-        "value": "TODO",
+        "value": 43396389,
         "source_file": "kegoc_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       },
       {
         "name": "equity",
         "label": "Total equity at end of 2023",
-        "value": "TODO",
+        "value": 685719134,
         "source_file": "kegoc_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "6.33 %",
+    "gold_value": 6.33,
     "note": "ROE = net income / total equity at the END of the year (tools.roe), not average equity."
   },
   {
@@ -349,21 +350,21 @@
       {
         "name": "total_liabilities",
         "label": "Total liabilities 2024",
-        "value": "TODO",
+        "value": 327144288,
         "source_file": "kegoc_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       },
       {
         "name": "total_equity",
         "label": "Total equity 2024",
-        "value": "TODO",
+        "value": 769921817,
         "source_file": "kegoc_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
-    "note": "kegoc_2024.pdf page 9 had OCR errors (DECISIONS.md): check the figures against the page image."
+    "gold_answer": "0.42 x",
+    "gold_value": 0.42,
+    "note": "kegoc_2024.pdf page 9 had OCR errors (DECISIONS.md): check the figures against the page image. Verified against the page image: equity 769,921,817 + liabilities 327,144,288 = 1,097,066,105 (total equity and liabilities)."
   },
   {
     "id": "q020",
@@ -377,20 +378,20 @@
       {
         "name": "old",
         "label": "Revenue 2022",
-        "value": "TODO",
+        "value": 217255548,
         "source_file": "kegoc_2022.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       },
       {
         "name": "new",
         "label": "Revenue 2024",
-        "value": "TODO",
+        "value": 319905932,
         "source_file": "kegoc_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "47.25 %",
+    "gold_value": 47.25,
     "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
   },
   {
@@ -400,13 +401,13 @@
     "year": 2023,
     "type": "text",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "RSM Qazaqstan LLP audited KEGOC's 2023 financial statements.",
     "gold_keywords": [
-      "TODO"
+      "RSM"
     ],
     "gold_value": null,
     "source_file": "kegoc_2023.pdf",
-    "source_page": "TODO",
+    "source_page": 3,
     "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
@@ -416,13 +417,14 @@
     "year": 2024,
     "type": "text",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "KEGOC is the national company and system operator providing electricity transmission over the national electric grid, technical dispatching and balancing of electricity production and consumption in Kazakhstan.",
     "gold_keywords": [
-      "TODO"
+      "transmission",
+      "electric"
     ],
     "gold_value": null,
     "source_file": "kegoc_2024.pdf",
-    "source_page": "TODO",
+    "source_page": 14,
     "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
@@ -432,7 +434,7 @@
     "year": 2025,
     "type": "not_found",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Not found in the reports",
     "gold_value": null,
     "source_file": null,
     "source_page": null,
@@ -445,11 +447,11 @@
     "year": 2024,
     "type": "not_found",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Not found in the reports",
     "gold_value": null,
     "source_file": null,
     "source_page": null,
-    "note": "Check by hand: if the notes give the number of employees, change the type to numeric. After checking by hand, set gold_answer to \"Not found in the reports\"."
+    "note": "Check by hand: if the notes give the number of employees, change the type to numeric. After checking by hand, set gold_answer to \"Not found in the reports\". Checked: kegoc_2024.pdf notes do not disclose the number of employees."
   },
   {
     "id": "q025",
@@ -459,10 +461,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Revenue 2024",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Kcell's revenue from contracts with customers in 2024 was KZT 235,467 million.",
+    "gold_value": 235467,
     "source_file": "kcell_2024.pdf",
-    "source_page": "TODO",
+    "source_page": 9,
     "note": "Revenue 2024: take the figure from the main statement of kcell_2024.pdf."
   },
   {
@@ -473,10 +475,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Net income 2022",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Kcell's net income (profit for the year) in 2022 was KZT 40,350 million.",
+    "gold_value": 40350,
     "source_file": "kcell_2022.pdf",
-    "source_page": "TODO",
+    "source_page": 10,
     "note": "Net income 2022: take the figure from the main statement of kcell_2022.pdf."
   },
   {
@@ -487,10 +489,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Total assets 2023",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Kcell's total assets at 31 December 2023 were KZT 391,260 million.",
+    "gold_value": 391260,
     "source_file": "kcell_2023.pdf",
-    "source_page": "TODO",
+    "source_page": 8,
     "note": "Total assets 2023: take the figure from the main statement of kcell_2023.pdf."
   },
   {
@@ -501,10 +503,10 @@
     "type": "numeric",
     "unit": "million KZT",
     "label": "Cash and cash equivalents 2022",
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "Kcell's cash and cash equivalents at 31 December 2022 were KZT 46,248 million.",
+    "gold_value": 46248,
     "source_file": "kcell_2022.pdf",
-    "source_page": "TODO",
+    "source_page": 9,
     "note": "Cash and cash equivalents 2022: take the figure from the main statement of kcell_2022.pdf."
   },
   {
@@ -519,20 +521,20 @@
       {
         "name": "net_income",
         "label": "Net income 2024",
-        "value": "TODO",
+        "value": 10159,
         "source_file": "kcell_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       },
       {
         "name": "revenue",
         "label": "Revenue 2024",
-        "value": "TODO",
+        "value": 235467,
         "source_file": "kcell_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "4.31 %",
+    "gold_value": 4.31,
     "note": "Fill value and source_page of every input; gold_value is computed by eval.compute_gold."
   },
   {
@@ -547,20 +549,20 @@
       {
         "name": "net_income",
         "label": "Net income 2022",
-        "value": "TODO",
+        "value": 40350,
         "source_file": "kcell_2022.pdf",
-        "source_page": "TODO"
+        "source_page": 10
       },
       {
         "name": "equity",
         "label": "Total equity at end of 2022",
-        "value": "TODO",
+        "value": 138621,
         "source_file": "kcell_2022.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "29.11 %",
+    "gold_value": 29.11,
     "note": "ROE = net income / total equity at the END of the year (tools.roe), not average equity."
   },
   {
@@ -575,21 +577,21 @@
       {
         "name": "total_liabilities",
         "label": "Total liabilities 2023",
-        "value": "TODO",
+        "value": 219742,
         "source_file": "kcell_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 8
       },
       {
         "name": "total_equity",
         "label": "Total equity 2023",
-        "value": "TODO",
+        "value": 171518,
         "source_file": "kcell_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 8
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
-    "note": "kcell_2023.pdf is a scan: check the figures against the page image."
+    "gold_answer": "1.28 x",
+    "gold_value": 1.28,
+    "note": "kcell_2023.pdf is a scan: check the figures against the page image. Verified against the page image: 171,518 + 219,742 = 391,260."
   },
   {
     "id": "q032",
@@ -603,20 +605,20 @@
       {
         "name": "old",
         "label": "Revenue 2023",
-        "value": "TODO",
+        "value": 223747,
         "source_file": "kcell_2023.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       },
       {
         "name": "new",
         "label": "Revenue 2024",
-        "value": "TODO",
+        "value": 235467,
         "source_file": "kcell_2024.pdf",
-        "source_page": "TODO"
+        "source_page": 9
       }
     ],
-    "gold_answer": "TODO",
-    "gold_value": "TODO",
+    "gold_answer": "5.24 %",
+    "gold_value": 5.24,
     "note": "Each input may come from the report of its own year or from the comparative column of the next year's report; set source_file to the file where you read it."
   },
   {
@@ -626,13 +628,14 @@
     "year": 2022,
     "type": "text",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Ernst & Young LLP (EY) audited Kcell's 2022 financial statements.",
     "gold_keywords": [
-      "TODO"
+      "Ernst",
+      "Young"
     ],
     "gold_value": null,
     "source_file": "kcell_2022.pdf",
-    "source_page": "TODO",
+    "source_page": 3,
     "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
@@ -642,13 +645,13 @@
     "year": 2024,
     "type": "text",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Kazakhstani tenge (KZT), rounded to millions.",
     "gold_keywords": [
-      "TODO"
+      "tenge"
     ],
     "gold_value": null,
     "source_file": "kcell_2024.pdf",
-    "source_page": "TODO",
+    "source_page": 16,
     "note": "gold_keywords: 1-2 words that must appear in a correct answer (e.g. the auditor's name)."
   },
   {
@@ -658,11 +661,11 @@
     "year": 2024,
     "type": "not_found",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Not found in the reports",
     "gold_value": null,
     "source_file": null,
     "source_page": null,
-    "note": "Check by hand: if the notes give the subscriber count, replace this question. After checking by hand, set gold_answer to \"Not found in the reports\"."
+    "note": "Check by hand: if the notes give the subscriber count, replace this question. After checking by hand, set gold_answer to \"Not found in the reports\". Checked: kcell_2024.pdf does not disclose a subscriber count."
   },
   {
     "id": "q036",
@@ -671,10 +674,10 @@
     "year": 2023,
     "type": "not_found",
     "unit": "",
-    "gold_answer": "TODO",
+    "gold_answer": "Not found in the reports",
     "gold_value": null,
     "source_file": null,
     "source_page": null,
-    "note": "Company not in data/reports.json. After checking by hand, set gold_answer to \"Not found in the reports\"."
+    "note": "Company not in data/reports.json. After checking by hand, set gold_answer to \"Not found in the reports\". Checked: Kaspi appears only as a counterparty bank (Kaspi Bank JSC) in Kcell notes."
   }
 ]
