@@ -21,6 +21,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from eval.consistency import check_consistency
 from eval.metrics import TODO, is_ready
 from src.agent.tools import CALCULATORS
 
@@ -182,6 +183,12 @@ def main(argv: list[str] | None = None) -> int:
     errors = check(questions, load_manifest(args.manifest))
     if isinstance(questions, list):
         print(summary([q for q in questions if isinstance(q, dict)]))
+        if not errors:
+            warnings = check_consistency(questions)
+            if warnings:
+                print(f"\n{len(warnings)} warning(s), check these figures in the PDF again:")
+                for w in warnings:
+                    print(f"  - {w}")
     if errors:
         print(f"\n{len(errors)} problem(s):")
         for e in errors:
