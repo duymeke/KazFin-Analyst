@@ -416,3 +416,32 @@ the same figure used as a ratio input. `check_questions` and `fill` now warn whe
 - a page number is larger than the PDF (only when the PDF is in `data/raw/`).
 These are warnings, not errors: a real restatement between two reports is possible, so the
 person who read the page decides.
+
+## 2026-11-24 · Gold values filled in (Zangar)
+
+All 36 gold values in `eval/questions.json` were read by hand from the PDFs (`check_questions`:
+36 of 36 ready, no consistency warnings). Ratio gold values were computed by
+`eval.compute_gold`, so they are rounded to 2 decimals exactly like the agent's calculators.
+Notes on individual questions are kept in their `note` field.
+
+### Restated figures (IFRS 17): q005 uses the figure as originally reported
+The 2023 Halyk Bank report shows the 2022 comparative **restated** under IFRS 17, which differs
+from the 2022 figure in `halyk_2022.pdf`. For q005 (net income change 2022 → 2023) the 2022 input
+is the figure **as originally reported** in `halyk_2022.pdf`; the restated alternative and the
+percentage it would give are written in the question's `note`.
+**Rule:** a figure for year Y is taken from the report for year Y (as originally reported); the
+comparative column of the next report is used only when the report for year Y does not have it.
+This is the same order the agent's prompt follows ("search year=Y first").
+**Consequence for the evaluation:** if the agent uses the restated comparative from the 2023
+report, q005 is scored as wrong even though the figure is in a report. When analysing results,
+check q005 by hand and describe such cases separately in `eval/results.md`.
+
+### Hand checks recorded in the questions
+- q002: the first value entered was the "Kazakhstan" geographic segment from the notes, not the
+  consolidated total assets; corrected to the figure from the statement of financial position.
+  Same trap the agent can fall into: a segment table repeats a "total" with a different meaning.
+- q019 (KEGOC 2024) and q031 (Kcell 2023, scan): OCR figures checked against the page image;
+  liabilities + equity add up to the total in the statement.
+- `not_found` questions q024 (KEGOC employees) and q035 (Kcell subscribers) were checked: the
+  statements do not disclose these numbers. q036: Kaspi appears in Kcell's notes only as a
+  counterparty bank, not as a reporting company.
