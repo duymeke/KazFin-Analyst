@@ -7,8 +7,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 from src.app.fake_answer import fake_answer
@@ -17,7 +19,25 @@ from src.models import Answer, Citation
 AnswerFn = Callable[[str], Answer]
 
 ALL_COMPANIES = "All"
-COMPANIES = [ALL_COMPANIES, "Halyk Bank", "KEGOC", "Kcell"]
+DEFAULT_COMPANIES = ["Halyk Bank", "KEGOC", "Kcell"]
+MANIFEST_PATH = Path(__file__).resolve().parents[2] / "data" / "reports.json"
+
+
+def load_companies(path: Path = MANIFEST_PATH) -> list[str]:
+    """Options for the company filter: "All" + companies in data/reports.json, in file order.
+
+    Falls back to the MVP companies if the manifest is missing or broken, so the
+    UI still starts.
+    """
+    try:
+        reports = json.loads(path.read_text(encoding="utf-8"))["reports"]
+        names = list(dict.fromkeys(r["company"] for r in reports if not r.get("skip")))
+    except (OSError, ValueError, KeyError, TypeError):
+        names = []
+    return [ALL_COMPANIES, *(names or DEFAULT_COMPANIES)]
+
+
+COMPANIES = load_companies()
 
 
 @dataclass
@@ -57,6 +77,11 @@ def ask(answer_fn: AnswerFn, question: str) -> AskResult:
             return AskResult(
                 error="The LLM is not configured: copy .env.example to .env and set "
                 "LLM_API_KEY and LLM_MODEL. Or run the demo with USE_FAKE_AGENT=1."
+            )
+        if isinstance(exc, FileNotFoundError):  # the agent raises it when data/index is missing
+            return AskResult(
+                error="The search index is not built yet. Put the report PDFs in data/raw/ "
+                "and run: python -m scripts.build_index"
             )
         return AskResult(error=f"The request to the LLM failed ({type(exc).__name__}). Try again later.")
 
