@@ -30,6 +30,9 @@ def main(argv: list[str]) -> int:
     except LLMConfigError as exc:
         print(f"Configuration error: {exc}")
         return 1
+    except FileNotFoundError as exc:  # data/index was not built yet
+        print(f"Setup error: {exc}")
+        return 1
     except Exception as exc:  # network / provider errors: short message, no stack trace
         print(f"LLM request failed: {type(exc).__name__}: {exc}")
         return 1

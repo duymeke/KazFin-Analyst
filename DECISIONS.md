@@ -335,6 +335,122 @@ p. 58, the capital note with the same figure; the model keeps looking for a row 
 searches, also computed revenue with government grants via `total`). Kaspi was not run: the
 OpenRouter free daily limit was reached (HTTP 429).
 
+## 2026-11-18 · Agent on the real retriever (Berikzhan)
+
+### The real Retriever is the default, opened once
+`answer(question, retriever=None)` now uses `_default_retriever()`, which opens `data/index`
+once per process (`functools.lru_cache`), instead of `StubRetriever`. If `data/index` does not
+exist it raises `FileNotFoundError("Index not found. Run: python -m scripts.build_index")`
+before any LLM call, and `scripts/ask.py` prints it as a setup error, not as "LLM request
+failed". `Retriever` is imported inside the function, so `src/agent/agent.py` still imports
+without chromadb. The `retriever` parameter stays, so tests and eval can pass a stub.
+`tests/test_agent.py` has an autouse fixture that swaps in `StubRetriever`, so the tests stay
+offline (7 tests call `answer()` without a retriever).
+
+### Prompt rules for real financial statements
+- **Units.** Every figure is given with its unit: KEGOC reports in thousands of tenge, Halyk
+  and Kcell in millions. Without this a KEGOC figure could be read as millions (1000x error);
+  the parser already prefixes chunks with `Units: ...`.
+- **Comparative column.** The report for year X also has year X-1. For year Y the agent searches
+  year Y first, then the Y+1 report, and must take the column of the year asked.
+- **Main statements over notes**, and an OCR row without a label or with inconsistent numbers is
+  replaced by the same figure from a text page (KEGOC 2024 page 9 has known OCR digit errors).
+- **Always pass `company=`**, so a company we do not have (e.g. Kaspi) returns no chunks instead
+  of chunks from another company.
+- Up to three searches before "Not found", so `MAX_STEPS` went from 6 to 8.
+
+### Numbers with spaces and dots in the answer
+`_numbers_in_text` reads `693 435` and `1.097.066.105` as whole numbers. A single dot stays a
+decimal (`17.31`, and also `569.653`), because one dot cannot be told apart from a thousands
+separator. The prompt asks the model to write commas, so this is a fallback.
+
+### Step 5: first run on the real index (agent was wrong in 2 of 4)
+Run on branch `agent/real-retriever` (e6272aa), index of `main` after PR #5 (OCR), model
+`baidu/ernie-5.5-flash-preview:free`. `pytest`: 154 passed.
+
+| Question | Answer | Cited | Verdict |
+|---|---|---|---|
+| Halyk net income 2023 | 693,436 million KZT | p. 13, p. 153 | ✅ matches "NET INCOME 693,436" on the profit or loss statement (p. 12). p. 14 shows 693,435, which the agent did not take. |
+| KEGOC total equity end of 2024 | 769,921,817 thousand KZT | p. 9 only | ⚠️ figure is right, citation is not (below) |
+| Kcell revenue 2022 → 2024 | 627,617 → 704,544 million KZT, +12.3% | none | ❌ made up (below) |
+| Kaspi net income 2023 | "Not found in the reports" | none | ✅ |
+
+**Kcell: no tool call at all (agent was wrong).** The model answered in step 1 from its own
+knowledge: no `search_reports`, no calculator. It cited `[kcell-2024-p5-0]`, an id it never
+received, so our filter dropped it and the answer had **no citations but `found=True`**. The
+figures are about 3x too high (Kcell's own release gives 2022 revenue of 221,232 million KZT),
+and "+12.3% (calculator)" was the model's own arithmetic (the calculator would give 12.26).
+**How we noticed:** the `-v` log shows `step 1: final answer` with no `call` line, and
+`ask.py` printed no "Sources". The prompt rule "always call search_reports" is not enough;
+the code must not accept a figure without a citation.
+
+**KEGOC: right figure, invented citation.** 769,921,817 = total assets 1,097,066,105 (text
+layer, p. 8) − total liabilities 327,144,288, so the figure is consistent. But the model cited
+`[kegoc-2024-p13-3]`, which search never returned (it returned `p13-0`), so the only citation
+left is p. 9, the OCR page. The answer also says the p. 9 total 1,087,066,105 is "consistent"
+with this equity; it is not: that total is the known OCR misread (1,087,066,105 − 327,144,288
+= 759,921,817). The agent made 6 searches although the prompt allows 3, and used 7 of 8 steps.
+
+**Small bug:** "Key numbers" contains `31` from "31 December" (Halyk and KEGOC answers).
+
+**Kcell to be rerun:** Dinmukhamed is fixing rotated pages (Kcell 2024, KEGOC 2023) in ingest,
+so the Kcell question is rerun only after his PR is merged and the index is rebuilt.
+
+### Guards in code instead of prompt rules only
+The run showed that the model does not keep the prompt rules, so `agent.py` now checks them:
+- **No search, no answer.** A final answer before any `search_reports` call (the Kcell case) is
+  sent back once with "call search_reports now"; a second one gives `found=False`.
+  "Not found in the reports" without a search is still accepted (the Kaspi case).
+- **Invented citations are sent back once.** If the answer cites ids that search never returned
+  (the KEGOC `p13-3` case), the model is told which ids are wrong and asked to fix them.
+- **No figures without a source.** If the final answer has figures but no valid citation, the
+  user gets "Not found in the reports: the answer had figures but no source in the reports" and
+  `found=False`, instead of figures they cannot check.
+- **Search limit in code.** After `MAX_SEARCHES = 4` searches `search_reports` returns an error
+  to the model. `MAX_STEPS` went from 8 to 10 so the two nudges fit.
+- Days in dates ("31 December", "December 31") are no longer counted as figures.
+Each case from the run has a test with a scripted `chat()` in `tests/test_agent.py`.
+
+### Second run: index before PR #7, the model subtracted by itself (agent was wrong)
+Run by Dinmukhamed on `agent/real-retriever` @ 6e03e66, index built on `main` @ 4c04013 (after
+PR #6 rotated pages, **before** PR #7 OCR fixes), same model. `pytest`: 162 passed.
+
+| Question | Answer | Cited | Verdict |
+|---|---|---|---|
+| Halyk net income 2023 | 693,436 million KZT | p. 12, 13, 153 | ✅ now cites the profit or loss statement itself (p. 12) |
+| KEGOC total equity end of 2024 | 759,921,817 thousand KZT | p. 9, 13 | ❌ 10,000,000 too low (below) |
+| Kcell revenue 2022 → 2024 | 219,002 → 235,467 million KZT, +7.52% | p. 10 (2022), p. 9 (2024) | ✅ two searches, `percent_change`; both figures are "revenue from contracts with customers" |
+| Kaspi net income 2023 | "Not found in the reports" | none | ✅ |
+
+**KEGOC: own arithmetic on an OCR error.** The index did not have PR #7 yet, so p. 9 still
+said "Total equity and abilities 1,087,066,105". The model wrote
+"Equity = 1,087,066,105 − 327,144,288 = 759,921,817" and "about 759.9 billion": a subtraction
+and a unit conversion done by the model, not by a tool. The search limit from the guards above
+worked (step 5: "search limit reached"), but p. 13 with the 2024 equity total was still not
+found. **How we noticed:** the result is 10,000,000 below the 769,921,817 we get from the
+text-layer total on p. 8. **Root cause on our side:** the agent had no tool for a subtraction
+or a sum, only for percent change and ratios, so the model could not follow "never do
+arithmetic yourself" even if it wanted to.
+
+**Fix:**
+- New calculators `difference(minuend, subtrahend)` and `total(values)` in `tools.py`.
+- Every figure in a final answer must appear in a chunk that search returned or be a calculator
+  result (a rounded one is fine: 12.26 → 12.3). Otherwise the model gets the list of such
+  figures once ("use difference, total or another calculator, do not convert units"); if it
+  repeats, the answer is "Not found in the reports: the answer had figures that are neither in
+  the reports nor computed by a calculator tool" with `found=False`. Small whole numbers (< 100,
+  note and list numbers) are not checked; figures are compared without sign, because the
+  statements write losses as (930); OCR numbers with mixed separators (`1,001.785.007`) also
+  count as written. `MAX_STEPS` went from 10 to 12.
+- The prompt now says: copy figures exactly, no unit conversion, use `difference` and `total`.
+
+**Kcell revenue line:** the answer uses "revenue from contracts with customers" in both years.
+Kcell's press releases give a higher total (221,232 million KZT for 2022), which includes other
+revenue. The eval gold value must say which line counts as "revenue".
+
+**Next:** rebuild the index on `main` @ b471425 (with PR #7) and rerun the KEGOC question.
+Ranking p. 13 higher for "total equity" is Dinmukhamed's next retrieval task.
+
 ## 2026-11-19 · Evaluation question set (Zangar)
 
 ### 36 questions, gold values filled in by hand
